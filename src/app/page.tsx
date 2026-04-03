@@ -1,65 +1,95 @@
-import Image from "next/image";
+'use client';
+
+import { useSystemState } from '@/store/useSystemState';
+import Header from '@/components/layout/Header';
+import SideNav from '@/components/layout/SideNav';
+import BottomNav from '@/components/layout/BottomNav';
+import VideoFeed from '@/components/dashboard/VideoFeed';
+import SensorCards from '@/components/dashboard/SensorCards';
+import TacticalCard from '@/components/dashboard/TacticalCard';
+import LogSection from '@/components/dashboard/LogSection';
 
 export default function Home() {
+  const { state, startupPhase } = useSystemState();
+  const isOff = state === 'OFF_STATE';
+  const isStarting = state === 'STARTUP_SEQUENCE';
+
+  // Determine main content class based on system state
+  const contentClass = isOff
+    ? 'system-off'
+    : isStarting && !startupPhase.filterRemoved
+    ? 'system-off'
+    : 'system-waking';
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <>
+      <Header />
+      <SideNav />
+
+      {/* Main Content Canvas */}
+      <main className={`lg:ml-20 pt-20 pb-20 px-4 lg:px-6 max-w-[1600px] mx-auto min-h-screen`}>
+        {/* Dashboard Header (Desktop only) */}
+        <div className="hidden lg:flex justify-between items-end mb-10 mt-8">
+          <div>
+            <p className="font-[family-name:var(--font-jetbrains-mono)] text-xs text-muted tracking-[0.3em] uppercase mb-1">
+              System Status: {isOff ? 'Cold Standby' : isStarting ? 'Initializing...' : 'Active Monitoring'}
+            </p>
+            <h1 className="text-4xl font-[family-name:var(--font-space-grotesk)] font-bold tracking-tighter text-on-surface">
+              MISSION CONTROL
+            </h1>
+          </div>
+          <div className="text-right">
+            <p className="font-[family-name:var(--font-jetbrains-mono)] text-xs text-muted uppercase">Sector Coordination</p>
+            <p className="font-[family-name:var(--font-space-grotesk)] text-lg text-primary tracking-tighter">
+              42.3601° N, 71.0589° W
+            </p>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        {/* ===== DESKTOP LAYOUT (lg+) ===== */}
+        <div className={`hidden lg:flex flex-row items-stretch gap-6 mb-12 transition-all duration-700 ${contentClass}`}>
+          {/* Left Column: Video Feed (16:9 ratio) */}
+          <div className="w-[75%] relative aspect-video">
+            <div className="absolute inset-0">
+              <VideoFeed />
+            </div>
+          </div>
+
+          {/* Right Column: 3 Control Cards stacked vertically, strictly bound by left column's height */}
+          <div className="w-[25%] relative">
+            <div className="absolute inset-0 flex flex-col gap-4 min-h-0">
+              <SensorCards />
+              <TacticalCard />
+            </div>
+          </div>
+        </div>
+
+        {/* ===== MOBILE LAYOUT (<lg) ===== */}
+        <div className={`lg:hidden space-y-4 mt-4 transition-all duration-700 ${contentClass}`}>
+          {/* Section 1: Camera Feed (16:9 aspect, full-width) */}
+          <div className="aspect-video w-full">
+            <VideoFeed />
+          </div>
+
+          {/* Section 2: 2-Column Grid (Sensor + Controls) */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Col 1: Sensor Info (stacked vertically) */}
+            <div className="space-y-4">
+              <SensorCards />
+            </div>
+
+            {/* Col 2: Manual Controls */}
+            <TacticalCard />
+          </div>
+        </div>
+
+        {/* Bottom: Logs (both layouts) */}
+        <div className="mt-8 lg:mt-12">
+          <LogSection />
         </div>
       </main>
-    </div>
+
+      <BottomNav />
+    </>
   );
 }

@@ -1,26 +1,197 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* === COLOR PALETTE (Material You Dark — S.A.F.E.) === */
+  --color-background: #0e0e0e;
+  --color-foreground: #e2e2e2;
+  --color-surface: #131313;
+  --color-surface-dim: #131313;
+  --color-surface-bright: #393939;
+  --color-surface-container-lowest: #0e0e0e;
+  --color-surface-container-low: #1b1b1b;
+  --color-surface-container: #1f1f1f;
+  --color-surface-container-high: #2a2a2a;
+  --color-surface-container-highest: #353535;
+  --color-on-surface: #e2e2e2;
+  --color-on-surface-variant: #e6bdb8;
+  --color-on-background: #e2e2e2;
+  --color-primary: #ffb4ab;
+  --color-primary-container: #dc2626;
+  --color-on-primary: #690005;
+  --color-on-primary-container: #fff6f5;
+  --color-primary-fixed: #ffdad6;
+  --color-primary-fixed-dim: #ffb4ab;
+  --color-on-primary-fixed: #410002;
+  --color-on-primary-fixed-variant: #93000b;
+  --color-secondary: #c8c6c5;
+  --color-secondary-container: #474746;
+  --color-on-secondary: #313030;
+  --color-on-secondary-container: #b7b5b4;
+  --color-on-secondary-fixed: #1c1b1b;
+  --color-on-secondary-fixed-variant: #474746;
+  --color-error: #ffb4ab;
+  --color-error-container: #93000a;
+  --color-on-error: #690005;
+  --color-on-error-container: #ffdad6;
+  --color-outline: #ac8884;
+  --color-outline-variant: #5c403c;
+  --color-inverse-surface: #e2e2e2;
+  --color-inverse-on-surface: #303030;
+  --color-inverse-primary: #bf0715;
+  --color-surface-tint: #ffb4ab;
+  --color-surface-variant: #353535;
+  --color-tertiary: #c8c6c6;
+  --color-tertiary-container: #737272;
+  --color-on-tertiary: #303030;
+  --color-on-tertiary-container: #fbf8f7;
+  --color-muted: #474746;
+  --color-safe-red: #dc2626;
+
+  /* === FONTS === */
+  --font-headline: "Space Grotesk", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --font-label: "Inter", sans-serif;
+
+  /* === BORDER RADIUS (ultra-minimalist) === */
+  --radius: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+
+  /* === ANIMATIONS === */
+  --animate-pulse-red: pulse-red 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-fade-in: fade-in 0.8s ease-out forwards;
+  --animate-slide-up: slide-up 0.5s ease-out forwards;
+  --animate-roll-number: roll-number 1s ease-out forwards;
+  --animate-startup-glow: startup-glow 0.8s ease-out forwards;
+  --animate-blink: blink 1s step-end infinite;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* === BASE === */
+body {
+  background-color: #0e0e0e;
+  color: #e2e2e2;
+  font-family: "Inter", sans-serif;
+}
+
+/* === SYSTEM OFF STATE === */
+.system-off {
+  filter: grayscale(100%) opacity(40%) blur(1px);
+  pointer-events: none;
+  transition: filter 0.8s ease-out;
+}
+
+.system-off-header {
+  filter: grayscale(100%) opacity(60%);
+}
+
+.system-waking {
+  filter: none;
+  transition: filter 0.8s ease-out;
+}
+
+/* === CUSTOM CLASSES === */
+.custom-reticle {
+  border: 1px solid rgba(220, 38, 38, 0.4);
+  background: radial-gradient(circle, rgba(220, 38, 38, 0.1) 0%, transparent 70%);
+}
+
+.anamorphic-glow {
+  background: linear-gradient(90deg, #dc2626 0%, #93000b 100%);
+  box-shadow: 0 0 30px rgba(220, 38, 38, 0.2);
+}
+
+.hud-scanline {
+  background: linear-gradient(to bottom, transparent 50%, rgba(220, 38, 38, 0.05) 50%);
+  background-size: 100% 4px;
+  pointer-events: none;
+}
+
+.glass-modal {
+  backdrop-filter: blur(16px);
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgba(220, 38, 38, 0.15);
+}
+
+.power-glow {
+  filter: drop-shadow(0 0 8px #dc2626);
+}
+
+/* === KEYFRAMES === */
+@keyframes pulse-red {
+  0%, 100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes roll-number {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes startup-glow {
+  from {
+    box-shadow: 0 0 0 rgba(220, 38, 38, 0);
+  }
+  to {
+    box-shadow: 0 0 30px rgba(220, 38, 38, 0.3);
+  }
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Grid background for HUD feel */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(92, 64, 60, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(92, 64, 60, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: #131313;
+}
+::-webkit-scrollbar-thumb {
+  background: #353535;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #474746;
 }
