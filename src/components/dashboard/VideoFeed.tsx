@@ -9,7 +9,7 @@ export default function VideoFeed() {
 
   return (
     <div className="relative w-full h-full bg-surface-container-lowest overflow-hidden rounded-lg">
-      {/* Camera image */}
+      {/* Camera feed surface */}
       <div
         className={`w-full h-full transition-all duration-700 ${
           isOff
@@ -19,9 +19,6 @@ export default function VideoFeed() {
             : 'opacity-0'
         }`}
         style={{
-          backgroundImage: 'url(/camera-placeholder.jpg)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
           backgroundColor: '#0a0a0a',
         }}
       />
