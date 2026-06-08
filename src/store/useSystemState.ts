@@ -2,170 +2,128 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import {
+  LIVE_SENSOR_SNAPSHOT,
+  MANUAL_MODE_PASSWORD,
+  STARTUP_TIMELINE_MS,
+  initialStartupPhase,
+} from '@/core/system/constants';
+import type { StartupPhase, SystemState } from '@/core/system/types';
 
-export type SystemState = 'OFF_STATE' | 'STARTUP_SEQUENCE' | 'AUTO_MODE' | 'MANUAL_MODE';
-
-export interface StartupPhase {
-  audioPlayed: boolean;
-  filterRemoved: boolean;
-  cameraVisible: boolean;
-  numbersRolled: boolean;
-  logsInitialized: boolean;
-}
+export type { StartupPhase, SystemState };
 
 interface SystemStore {
-  // Core state
   state: SystemState;
   isManual: boolean;
-  
-  // Startup sequence tracking
   startupPhase: StartupPhase;
-  
-  // Sensor data (dummy for now)
   temperature: number;
   frequency: number;
-  
-  // Actions
   powerOn: () => void;
   powerOff: () => void;
   activateManual: () => void;
   deactivateManual: () => void;
-  
-  // Auth
   authPassword: (password: string) => boolean;
-  
-  // Internal
   _runStartupSequence: () => void;
 }
-
-const CORRECT_PASSWORD = 'ITS2024';
-
-const initialStartupPhase: StartupPhase = {
-  audioPlayed: false,
-  filterRemoved: false,
-  cameraVisible: false,
-  numbersRolled: false,
-  logsInitialized: false,
-};
 
 export const useSystemState = create<SystemStore>()(
   persist(
     (set, get) => ({
-      // Initial state: system OFF
-      state: 'OFF_STATE',
-  isManual: false,
-  startupPhase: { ...initialStartupPhase },
-  temperature: 0,
-  frequency: 0,
-
-  powerOn: () => {
-    const { state } = get();
-    if (state !== 'OFF_STATE') return;
-    
-    set({ state: 'STARTUP_SEQUENCE' });
-    get()._runStartupSequence();
-  },
-
-  powerOff: () => {
-    set({
       state: 'OFF_STATE',
       isManual: false,
       startupPhase: { ...initialStartupPhase },
       temperature: 0,
       frequency: 0,
-    });
-  },
 
-  activateManual: () => {
-    const { state } = get();
-    if (state !== 'AUTO_MODE') return;
-    
-    set({
-      state: 'MANUAL_MODE',
-      isManual: true,
-    });
-    
-    // In production: POST /api/mode { auto: false } to RPi
-    // For now just console log
-    console.log('[S.A.F.E.] MANUAL_MODE activated — RPi auto-suppression OFF');
-    console.log('[S.A.F.E.] Active modules: YOLO Vision ✓, Camera Feed ✓');
-    console.log('[S.A.F.E.] Disabled modules: Auto-suppression ✗, Auto-servo ✗');
-  },
+      powerOn: () => {
+        const { state } = get();
+        if (state !== 'OFF_STATE') return;
 
-  deactivateManual: () => {
-    const { state } = get();
-    if (state !== 'MANUAL_MODE') return;
-    
-    set({
-      state: 'AUTO_MODE',
-      isManual: false,
-    });
-    
-    console.log('[S.A.F.E.] AUTO_MODE re-activated — full auto-suppression ON');
-  },
+        set({ state: 'STARTUP_SEQUENCE' });
+        get()._runStartupSequence();
+      },
 
-  authPassword: (password: string) => {
-    if (password === CORRECT_PASSWORD) {
-      get().activateManual();
-      return true;
-    }
-    return false;
-  },
-
-  _runStartupSequence: () => {
-    // T+0ms: Play startup audio
-    setTimeout(() => {
-      set((s) => ({
-        startupPhase: { ...s.startupPhase, audioPlayed: true },
-      }));
-      // Audio would play here in browser
-      try {
-        const audio = new Audio('/startup.mp3');
-        audio.volume = 0.3;
-        audio.play().catch(() => {
-          // Audio autoplay blocked — that's fine
+      powerOff: () => {
+        set({
+          state: 'OFF_STATE',
+          isManual: false,
+          startupPhase: { ...initialStartupPhase },
+          temperature: 0,
+          frequency: 0,
         });
-      } catch {
-        // No audio available
-      }
-    }, 0);
+      },
 
-    // T+500ms: Remove grayscale/blur filter
-    setTimeout(() => {
-      set((s) => ({
-        startupPhase: { ...s.startupPhase, filterRemoved: true },
-      }));
-    }, 500);
+      activateManual: () => {
+        const { state } = get();
+        if (state !== 'AUTO_MODE') return;
 
-    // T+1000ms: Camera fade-in
-    setTimeout(() => {
-      set((s) => ({
-        startupPhase: { ...s.startupPhase, cameraVisible: true },
-      }));
-    }, 1000);
+        set({
+          state: 'MANUAL_MODE',
+          isManual: true,
+        });
 
-    // T+1500ms: Rolling numbers animation
-    setTimeout(() => {
-      set((s) => ({
-        startupPhase: { ...s.startupPhase, numbersRolled: true },
-        temperature: 32,
-        frequency: 45,
-      }));
-    }, 1500);
+        console.log('[S.A.F.E.] MANUAL_MODE activated - RPi auto-suppression OFF');
+        console.log('[S.A.F.E.] Active modules: YOLO Vision, Camera Feed');
+        console.log('[S.A.F.E.] Disabled modules: Auto-suppression, Auto-servo');
+      },
 
-    // T+1800ms: Logs initialized
-    setTimeout(() => {
-      set((s) => ({
-        startupPhase: { ...s.startupPhase, logsInitialized: true },
-      }));
-    }, 1800);
+      deactivateManual: () => {
+        const { state } = get();
+        if (state !== 'MANUAL_MODE') return;
 
-    // T+2000ms: Transition to AUTO_MODE
-    setTimeout(() => {
-      set({ state: 'AUTO_MODE' });
-    }, 2000);
-  },
-}),
+        set({
+          state: 'AUTO_MODE',
+          isManual: false,
+        });
+
+        console.log('[S.A.F.E.] AUTO_MODE re-activated - full auto-suppression ON');
+      },
+
+      authPassword: (password: string) => {
+        if (password === MANUAL_MODE_PASSWORD) {
+          get().activateManual();
+          return true;
+        }
+        return false;
+      },
+
+      _runStartupSequence: () => {
+        setTimeout(() => {
+          set((s) => ({
+            startupPhase: { ...s.startupPhase, audioPlayed: true },
+          }));
+        }, STARTUP_TIMELINE_MS.audio);
+
+        setTimeout(() => {
+          set((s) => ({
+            startupPhase: { ...s.startupPhase, filterRemoved: true },
+          }));
+        }, STARTUP_TIMELINE_MS.filter);
+
+        setTimeout(() => {
+          set((s) => ({
+            startupPhase: { ...s.startupPhase, cameraVisible: true },
+          }));
+        }, STARTUP_TIMELINE_MS.camera);
+
+        setTimeout(() => {
+          set((s) => ({
+            startupPhase: { ...s.startupPhase, numbersRolled: true },
+            ...LIVE_SENSOR_SNAPSHOT,
+          }));
+        }, STARTUP_TIMELINE_MS.sensors);
+
+        setTimeout(() => {
+          set((s) => ({
+            startupPhase: { ...s.startupPhase, logsInitialized: true },
+          }));
+        }, STARTUP_TIMELINE_MS.logs);
+
+        setTimeout(() => {
+          set({ state: 'AUTO_MODE' });
+        }, STARTUP_TIMELINE_MS.autoMode);
+      },
+    }),
   {
     name: 'safe-system-storage',
   }
