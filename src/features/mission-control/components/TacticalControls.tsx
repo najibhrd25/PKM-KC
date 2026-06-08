@@ -160,7 +160,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.redSoft,
   },
   lockOverlay: {
-    ...StyleSheet.absoluteFill,
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.62)',
     justifyContent: 'center',

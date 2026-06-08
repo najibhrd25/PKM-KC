@@ -4,10 +4,11 @@ Branch `react-native-safe` is a full React Native / Expo branch focused on mobil
 
 ## App Target
 
-- Expo SDK 56
+- Expo SDK 54
 - Expo Router
 - React Native 0.85
 - iOS Simulator first
+- Expo Go on iPhone supported for quick previews
 - `pnpm` package manager
 
 ## Folder Structure
@@ -39,4 +40,3 @@ For S.A.F.E., the Raspberry Pi stream is the expected production source. iOS Sim
 ## Web Code Policy
 
 This branch intentionally removes Next.js and web dashboard code from the mobile app surface. The old web implementation remains available in prior branches for reference.
-

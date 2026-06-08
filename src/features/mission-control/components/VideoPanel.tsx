@@ -55,7 +55,11 @@ const styles = StyleSheet.create({
     opacity: 0.72,
   },
   scanline: {
-    ...StyleSheet.absoluteFill,
+    bottom: 0,
+    left: 0,
+    position: 'absolute',
+    right: 0,
+    top: 0,
     backgroundColor: 'rgba(220, 38, 38, 0.035)',
   },
   topRow: {
