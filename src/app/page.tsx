@@ -8,9 +8,12 @@ import VideoFeed from '@/components/dashboard/VideoFeed';
 import SensorCards from '@/components/dashboard/SensorCards';
 import TacticalCard from '@/components/dashboard/TacticalCard';
 import LogSection from '@/components/dashboard/LogSection';
+import { useStartupAudio } from '@/platform/web/useStartupAudio';
 
 export default function Home() {
   const { state, startupPhase } = useSystemState();
+  useStartupAudio(startupPhase);
+
   const isOff = state === 'OFF_STATE';
   const isStarting = state === 'STARTUP_SEQUENCE';
 
@@ -26,8 +29,7 @@ export default function Home() {
       <Header />
       <SideNav />
 
-      {/* Main Content Canvas */}
-      <main className={`lg:ml-20 pt-20 pb-20 px-4 lg:px-6 max-w-[1600px] mx-auto min-h-screen`}>
+      <main className="min-h-screen max-w-[1600px] mx-auto px-4 pt-20 pb-24 lg:ml-20 lg:px-6 lg:pb-20">
         {/* Dashboard Header (Desktop only) */}
         <div className="hidden lg:flex justify-between items-end mb-10 mt-8">
           <div>
@@ -46,16 +48,13 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ===== DESKTOP LAYOUT (lg+) ===== */}
         <div className={`hidden lg:flex flex-row items-stretch gap-6 mb-12 transition-all duration-700 ${contentClass}`}>
-          {/* Left Column: Video Feed (16:9 ratio) */}
           <div className="w-[75%] relative aspect-video">
             <div className="absolute inset-0">
               <VideoFeed />
             </div>
           </div>
 
-          {/* Right Column: 3 Control Cards stacked vertically, strictly bound by left column's height */}
           <div className="w-[25%] relative">
             <div className="absolute inset-0 flex flex-col gap-4 min-h-0">
               <SensorCards />
@@ -64,26 +63,19 @@ export default function Home() {
           </div>
         </div>
 
-        {/* ===== MOBILE LAYOUT (<lg) ===== */}
-        <div className={`lg:hidden space-y-4 mt-4 transition-all duration-700 ${contentClass}`}>
-          {/* Section 1: Camera Feed (16:9 aspect, full-width) */}
-          <div className="aspect-video w-full">
-            <VideoFeed />
-          </div>
+        <div className={`lg:hidden space-y-4 transition-all duration-700 ${contentClass}`}>
+          <section aria-label="Live camera feed" className="-mx-4 aspect-square">
+            <VideoFeed variant="mobile" />
+          </section>
 
-          {/* Section 2: 2-Column Grid (Sensor + Controls) */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Col 1: Sensor Info (stacked vertically) */}
-            <div className="space-y-4">
+          <section aria-label="Sensors and manual controls" className="grid grid-cols-2 gap-3">
+            <div className="flex min-h-[260px] flex-col gap-3">
               <SensorCards />
             </div>
-
-            {/* Col 2: Manual Controls */}
             <TacticalCard />
-          </div>
+          </section>
         </div>
 
-        {/* Bottom: Logs (both layouts) */}
         <div className="mt-8 lg:mt-12">
           <LogSection />
         </div>

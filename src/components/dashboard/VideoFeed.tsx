@@ -2,13 +2,14 @@
 
 import { useSystemState } from '@/store/useSystemState';
 
-export default function VideoFeed() {
+export default function VideoFeed({ variant = 'desktop' }: { variant?: 'desktop' | 'mobile' }) {
   const { state, startupPhase } = useSystemState();
   const isOff = state === 'OFF_STATE';
   const cameraVisible = startupPhase.cameraVisible;
+  const isMobile = variant === 'mobile';
 
   return (
-    <div className="relative w-full h-full bg-surface-container-lowest overflow-hidden rounded-lg">
+    <div className={`relative w-full h-full bg-surface-container-lowest overflow-hidden ${isMobile ? 'rounded-none' : 'rounded-lg'}`}>
       {/* Camera feed surface */}
       <div
         className={`w-full h-full transition-all duration-700 ${
@@ -28,7 +29,7 @@ export default function VideoFeed() {
 
       {/* Targeting Reticle */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-32 h-32 lg:w-48 lg:h-48 custom-reticle flex items-center justify-center">
+        <div className="w-40 h-40 lg:w-48 lg:h-48 custom-reticle flex items-center justify-center">
           <div className="w-1 h-8 bg-primary-container absolute top-0" />
           <div className="w-1 h-8 bg-primary-container absolute bottom-0" />
           <div className="w-8 h-1 bg-primary-container absolute left-0" />
@@ -49,6 +50,17 @@ export default function VideoFeed() {
           {isOff ? 'OFFLINE' : 'LIVE'}
         </span>
       </div>
+
+      {isMobile && (
+        <div className="absolute bottom-0 left-0 right-0 flex items-center justify-between bg-surface-container-low/90 px-4 py-3">
+          <span className="font-[family-name:var(--font-jetbrains-mono)] text-[10px] tracking-[0.2em] text-muted">
+            CAMERA_VIEW_01
+          </span>
+          <span className="font-[family-name:var(--font-jetbrains-mono)] text-[10px] text-secondary">
+            1:1 MOBILE
+          </span>
+        </div>
+      )}
 
 
 

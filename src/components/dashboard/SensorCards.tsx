@@ -67,7 +67,7 @@ export default function SensorCards() {
                 ? 'bg-muted/10 h-[2px] lg:h-1'
                 : `bg-gradient-to-t from-primary-container/20 to-primary-container ${i % 3 === 0 ? 'animate-pulse' : ''}`
                 }`}
-              style={{ height: isOff ? (typeof window !== 'undefined' && window.innerWidth >= 1024 ? '4px' : '2px') : `${h}%` }}
+              style={isOff ? undefined : { height: `${h}%` }}
             />
           ))}
         </div>
