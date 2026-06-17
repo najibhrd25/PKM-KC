@@ -19,7 +19,8 @@ Bahasa: **Python 3** · Platform: **Raspberry Pi 5 (Pi OS Lite, headless)**
 8. [Dependency Injection & Bootstrap](#8-dependency-injection--bootstrap)
 9. [Strategi Testing](#9-strategi-testing)
 10. [Catatan Implementasi & Keamanan](#10-catatan-implementasi--keamanan)
-11. [Roadmap Integrasi](#11-roadmap-integrasi)
+11. [Antarmuka Web (Dashboard)](#11-antarmuka-web-dashboard)
+12. [Roadmap Integrasi](#12-roadmap-integrasi)
 
 ---
 
@@ -168,6 +169,12 @@ safe/
 │   ├── dac_audio.py          # DACAudio (bungkus DAC.py)
 │   └── _dac_driver.py        # = DAC.py lama, tak diubah
 │
+├── web/                      # OPSIONAL — antarmuka web (tepi sistem)
+│   ├── __init__.py
+│   ├── web_bridge.py         # WebBridge: FastAPI + SSE + MJPEG
+│   └── static/
+│       └── index.html        # frontend dashboard (kerangka contoh)
+│
 ├── orchestrator.py           # otak: fusi sensor + state machine
 ├── main.py                   # bootstrap + dependency injection
 │
@@ -213,6 +220,12 @@ AUDIO_STOP      = "audio_stop"       # Orchestrator -> DAC
 STATE_CHANGED   = "state_changed"    # Orchestrator -> siapa saja
 TARGET_LOCKED   = "target_locked"    # Tracking     -> Orchestrator
 EXTINGUISH_DONE = "extinguish_done"  # Orchestrator -> siapa saja
+
+# ---- Event antarmuka web (OPSIONAL, tepi sistem) ----
+FRAME_UPDATE    = "frame_update"     # YOLO        -> WebBridge (stream MJPEG)
+SET_MODE        = "set_mode"         # WebBridge   -> Orchestrator (AUTO/MANUAL)
+SERVO_JOG       = "servo_jog"        # WebBridge   -> Servo (joystick inkremental)
+MODE_CHANGED    = "mode_changed"     # Orchestrator -> WebBridge (notifikasi mode)
 ```
 
 ### Skema Payload
@@ -231,6 +244,10 @@ EXTINGUISH_DONE = "extinguish_done"  # Orchestrator -> siapa saja
 | `audio_stop` | Orch → DAC | `{}` |
 | `state_changed` | Orch → * | `{ old: str, new: str }` |
 | `target_locked` | Tracking → Orch | `{ error_px: float }` |
+| `frame_update` | YOLO → WebBridge | `{ jpeg: bytes }` (frame ter-annotate, sudah JPEG-encoded) |
+| `set_mode` | WebBridge → Orch | `{ mode: "auto" \| "manual" }` |
+| `servo_jog` | WebBridge → Servo | `{ d_yaw: float, d_pitch: float }` (delta derajat) |
+| `mode_changed` | Orch → WebBridge | `{ mode: "auto" \| "manual" }` |
 
 Catatan koordinat bbox: `cx, cy` = titik tengah bounding box (piksel), `w, h` = lebar/tinggi. Semua relatif terhadap `frame_w × frame_h`. Ini format yang akan dikeluarkan YOLO nanti — dan format yang sama dipakai `FakeDetector` saat testing.
 
@@ -251,6 +268,7 @@ class State(Enum):
     EXTINGUISHING = "extinguishing"  # servo terkunci + audio menyala
     EVALUATING    = "evaluating"     # cek apakah api sudah padam
     COOLDOWN      = "cooldown"       # jeda wajib setelah operasi audio
+    MANUAL        = "manual"         # kontrol joystick dari web; fusi sensor dijeda
 ```
 
 ### Diagram Transisi
@@ -274,6 +292,27 @@ class State(Enum):
                              └──────────┘                 └────────────┘
                                                           (jika masih ada → TRACKING)
 ```
+
+### Mode AUTO vs MANUAL
+
+Selain alur otomatis di atas, ada satu jalur lintas-state yang dipicu dari web:
+
+```
+   (state apa pun)        set_mode {manual}        ┌──────────┐
+   ─────────────────────────────────────────────► │  MANUAL  │
+                                                   └────┬─────┘
+        ▲   set_mode {auto}  ATAU  heartbeat timeout    │
+        └───────────────────────────────────────────────┘
+                          kembali ke IDLE
+```
+
+Aturan mode:
+
+- Default sistem adalah **AUTO**. Fusi sensor + tracking otomatis berjalan normal.
+- Saat web mengirim `set_mode {manual}`, Orchestrator masuk `MANUAL`: fusi sensor **dijeda** (event IR/YOLO tetap di-cache untuk dashboard, tapi tidak memicu transisi), sehingga servo tidak berebut antara perintah joystick dan tracking otomatis.
+- Selama `MANUAL`, joystick web mengirim `servo_jog {d_yaw, d_pitch}` langsung ke Servo.
+- Sistem kembali ke **AUTO** (state `IDLE`) lewat **dua jalur**: (a) toggle eksplisit `set_mode {auto}`, atau (b) **heartbeat timeout** — jika WebBridge tidak menerima heartbeat dari browser selama `WEB_HEARTBEAT_TIMEOUT` detik (browser ditutup, koneksi putus), ia otomatis mem-publish `set_mode {auto}`. Ini memenuhi syarat "saat pengguna tidak mengakses UI, otomatis masuk AUTO".
+- Demi keamanan, `MANUAL` tidak pernah otomatis menyalakan audio. Pemadaman saat manual (jika diizinkan) harus tombol eksplisit di UI — di luar cakupan dokumen ini.
 
 ### Logika Fusi Sensor (kunci minimalisasi alarm palsu)
 
@@ -859,7 +898,394 @@ Karena Event Bus memisahkan modul, Anda bisa menyuntik event palsu dari shell un
 
 ---
 
-## 11. Roadmap Integrasi
+## 11. Antarmuka Web (Dashboard)
+
+Web adalah **modul opsional di tepi sistem**. Ia tidak mengubah inti: hanya satu modul (`WebBridge`) yang subscribe/publish ke Event Bus, persis seperti modul lain. Kalau web dimatikan, sistem berjalan penuh tanpanya.
+
+### 11.1 Arsitektur
+
+```
+                       ┌────────────────────────────────┐
+                       │          EVENT BUS              │
+                       └──┬──────────┬──────────┬────────┘
+              frame_update│   state_changed     │servo_jog / set_mode
+              (dari YOLO) │   mode_changed       │(dari WebBridge)
+                          ▼          ▼           ▲
+                    ┌─────────────────────────────────┐
+                    │           WebBridge             │
+                    │  FastAPI (thread terpisah)      │
+                    └───┬──────────┬──────────┬───────┘
+              MJPEG     │   SSE    │   POST   │
+           /stream      │ /events  │ /cmd/*   │
+                        ▼          ▼          ▼
+                    ┌─────────────────────────────────┐
+                    │       Browser (dashboard)       │
+                    │  • live stream + bbox deteksi   │
+                    │  • status state real-time       │
+                    │  • toggle AUTO / MANUAL         │
+                    │  • joystick servo               │
+                    └─────────────────────────────────┘
+```
+
+Tiga jalur, masing-masing protokol yang paling cocok:
+
+| Jalur | Protokol | Arah | Isi |
+|---|---|---|---|
+| `/stream` | MJPEG | server → browser | frame kamera ter-annotate (dari `frame_update`) |
+| `/events` | SSE | server → browser | perubahan state, mode, hasil deteksi |
+| `/cmd/*`, `/heartbeat` | HTTP POST | browser → server | joystick, toggle mode, heartbeat |
+
+Prinsip yang dipertahankan: HTTP hanya di tepi. Jalur kritis (servo loop, audio) tidak menyentuh HTTP. Joystick mem-*publish* event ke bus dan langsung kembali — eksekusi servo tetap lewat jalur internal yang sama.
+
+### 11.2 Stream Kamera
+
+Stream **hanya berasal dari YOLO**. Modul deteksi yang sudah memegang frame kamera mem-publish `frame_update {jpeg}` (frame yang sudah digambari bounding box, lalu di-encode JPEG). WebBridge menyimpan frame terakhir dan menyajikannya sebagai MJPEG.
+
+Konsekuensi: kamera diakses **satu proses saja** (YOLO), tidak ada rebutan device. Selama `YOLODetector` belum aktif, `frame_update` tidak pernah terbit, dan `/stream` menampilkan placeholder "kamera tidak aktif". Saat YOLO siap, stream otomatis hidup tanpa mengubah WebBridge.
+
+Penyisipan di `YOLODetector` nanti cukup beberapa baris di loop inferensi:
+
+```python
+# di dalam _inference_loop YOLODetector (saat diimplementasikan)
+annotated = results[0].plot()          # frame + bounding box
+ok, buf = cv2.imencode(".jpg", annotated)
+if ok:
+    self._bus.publish(events.FRAME_UPDATE, {"jpeg": buf.tobytes()})
+```
+
+### 11.3 WebBridge
+
+```python
+# safe/web/web_bridge.py
+"""
+WebBridge — antarmuka web opsional. Modul tepi: hanya subscribe/publish
+ke Event Bus. Tidak memanggil modul lain langsung.
+
+Menyediakan:
+    GET  /             -> halaman dashboard (static/index.html)
+    GET  /stream       -> MJPEG live kamera (dari frame_update)
+    GET  /events       -> SSE status (state, mode, deteksi)
+    POST /cmd/mode     -> { mode: "auto"|"manual" }  -> set_mode
+    POST /cmd/jog      -> { d_yaw, d_pitch }         -> servo_jog
+    POST /heartbeat    -> tanda UI masih aktif (cegah balik ke AUTO)
+"""
+import json
+import time
+import queue
+import threading
+import logging
+
+from core.interfaces import BaseModule
+from core import events, config
+
+logger = logging.getLogger(__name__)
+
+
+class WebBridge(BaseModule):
+    def __init__(self, event_bus, host="0.0.0.0", port=8000):
+        self._bus = event_bus
+        self._host = host
+        self._port = port
+
+        self._latest_jpeg: bytes | None = None
+        self._sse_clients: list[queue.Queue] = []
+        self._last_heartbeat = 0.0
+        self._mode = "auto"
+        self._running = False
+
+        # terima update dari sistem
+        self._bus.subscribe(events.FRAME_UPDATE,  self._on_frame)
+        self._bus.subscribe(events.STATE_CHANGED, self._on_state)
+        self._bus.subscribe(events.MODE_CHANGED,  self._on_mode)
+        self._bus.subscribe(events.FIRE_DETECTED, self._on_detection)
+
+    # ---------- lifecycle ----------
+    def start(self):
+        self._running = True
+        threading.Thread(target=self._serve, daemon=True).start()
+        threading.Thread(target=self._heartbeat_watch, daemon=True).start()
+        logger.info("WebBridge di http://%s:%d", self._host, self._port)
+
+    def stop(self):
+        self._running = False
+
+    # ---------- handler dari bus ----------
+    def _on_frame(self, data):
+        self._latest_jpeg = data.get("jpeg")
+
+    def _on_state(self, data):
+        self._push_sse({"type": "state", "value": data["new"]})
+
+    def _on_mode(self, data):
+        self._mode = data["mode"]
+        self._push_sse({"type": "mode", "value": data["mode"]})
+
+    def _on_detection(self, data):
+        self._push_sse({"type": "detection",
+                        "bbox": data["bbox"],
+                        "confidence": data["confidence"]})
+
+    def _push_sse(self, payload: dict):
+        msg = f"data: {json.dumps(payload)}\n\n"
+        for q in list(self._sse_clients):
+            q.put(msg)
+
+    # ---------- heartbeat: balik ke AUTO bila UI hilang ----------
+    def _heartbeat_watch(self):
+        while self._running:
+            if (self._mode == "manual" and
+                    time.time() - self._last_heartbeat
+                    > config.WEB_HEARTBEAT_TIMEOUT):
+                logger.info("Heartbeat UI hilang — kembali ke AUTO.")
+                self._bus.publish(events.SET_MODE, {"mode": "auto"})
+            time.sleep(1.0)
+
+    # ---------- server FastAPI ----------
+    def _serve(self):
+        import uvicorn
+        from fastapi import FastAPI, Request
+        from fastapi.responses import (
+            StreamingResponse, HTMLResponse, JSONResponse)
+        from pathlib import Path
+
+        app = FastAPI()
+        static_dir = Path(__file__).parent / "static"
+
+        @app.get("/", response_class=HTMLResponse)
+        def index():
+            return (static_dir / "index.html").read_text()
+
+        @app.get("/stream")
+        def stream():
+            def gen():
+                placeholder = b""  # bisa diisi gambar "kamera tidak aktif"
+                while self._running:
+                    frame = self._latest_jpeg or placeholder
+                    if frame:
+                        yield (b"--frame\r\n"
+                               b"Content-Type: image/jpeg\r\n\r\n"
+                               + frame + b"\r\n")
+                    time.sleep(0.05)   # ~20 fps maksimum
+            return StreamingResponse(
+                gen(),
+                media_type="multipart/x-mixed-replace; boundary=frame")
+
+        @app.get("/events")
+        def events_sse():
+            q: queue.Queue = queue.Queue()
+            self._sse_clients.append(q)
+
+            def gen():
+                try:
+                    while self._running:
+                        yield q.get()
+                finally:
+                    self._sse_clients.remove(q)
+            return StreamingResponse(gen(), media_type="text/event-stream")
+
+        @app.post("/cmd/mode")
+        async def set_mode(req: Request):
+            body = await req.json()
+            mode = body.get("mode", "auto")
+            if mode == "manual":
+                self._last_heartbeat = time.time()
+            self._bus.publish(events.SET_MODE, {"mode": mode})
+            return JSONResponse({"ok": True, "mode": mode})
+
+        @app.post("/cmd/jog")
+        async def jog(req: Request):
+            body = await req.json()
+            self._bus.publish(events.SERVO_JOG, {
+                "d_yaw":   float(body.get("d_yaw", 0.0)),
+                "d_pitch": float(body.get("d_pitch", 0.0)),
+            })
+            return JSONResponse({"ok": True})
+
+        @app.post("/heartbeat")
+        def heartbeat():
+            self._last_heartbeat = time.time()
+            return JSONResponse({"ok": True})
+
+        uvicorn.run(app, host=self._host, port=self._port, log_level="warning")
+```
+
+### 11.4 Perubahan kecil di modul lain
+
+Web menambah dua tanggung jawab kecil — tetap lewat event, inti tidak berubah.
+
+**Orchestrator** menangani `set_mode` dan menegakkan jeda fusi saat MANUAL:
+
+```python
+# tambahan di Orchestrator.__init__
+self._bus.subscribe(events.SET_MODE, self._on_set_mode)
+self._mode = "auto"
+
+def _on_set_mode(self, data):
+    mode = data.get("mode", "auto")
+    self._mode = mode
+    if mode == "manual":
+        self._transition(State.MANUAL)
+    else:
+        self._transition(State.IDLE)   # kembali siaga otomatis
+    self._bus.publish(events.MODE_CHANGED, {"mode": mode})
+
+# di _evaluate_fusion(), baris paling awal:
+def _evaluate_fusion(self):
+    if self._mode == "manual":
+        return                         # fusi dijeda; event tetap ter-cache
+    ...
+```
+
+**ServoActuator** menangani joystick inkremental (`servo_jog`) — menambah delta ke sudut sekarang lalu clamp:
+
+```python
+# tambahan di ServoActuator.__init__
+self._bus.subscribe(events.SERVO_JOG, self._on_jog)
+self._cur_yaw = config.YAW_NEUTRAL
+self._cur_pitch = config.PITCH_NEUTRAL
+
+def _on_jog(self, data):
+    if not self._ready:
+        return
+    self._cur_yaw   = max(config.YAW_MIN,   min(config.YAW_MAX,
+                          self._cur_yaw   + float(data["d_yaw"])))
+    self._cur_pitch = max(config.PITCH_MIN, min(config.PITCH_MAX,
+                          self._cur_pitch + float(data["d_pitch"])))
+    with self._lock:
+        drv.move_to_angle(self._port, self._pkt, drv.ID_X, self._cur_yaw)
+        drv.move_to_angle(self._port, self._pkt, drv.ID_Y, self._cur_pitch)
+```
+
+Catatan: agar `servo_cmd` (tracking otomatis) dan `servo_jog` (manual) tidak saling menimpa posisi, keduanya sebaiknya berbagi state sudut yang sama di `ServoActuator`. Saat implementasi, satukan `_cur_yaw/_cur_pitch` dengan variabel yang dipakai `_on_cmd`.
+
+### 11.5 Konfigurasi tambahan
+
+```python
+# tambahan untuk config.py
+# ======================= WEB =======================
+WEB_HOST              = "0.0.0.0"
+WEB_PORT              = 8000
+WEB_HEARTBEAT_TIMEOUT = 5.0   # detik; UI dianggap hilang -> balik ke AUTO
+WEB_JOG_STEP_DEG      = 3.0   # derajat per input joystick (dipakai frontend)
+```
+
+### 11.6 Frontend (kerangka contoh)
+
+`web/static/index.html` — contoh minimal: stream, status, toggle mode, joystick. Frontend final bisa Anda kembangkan sendiri; yang penting endpoint-nya tetap.
+
+```html
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <title>S.A.F.E Dashboard</title>
+  <style>
+    body { font-family: system-ui; margin: 2rem; }
+    #stream { width: 640px; max-width: 100%; background:#111; border-radius:8px; }
+    .row { display: flex; gap: 2rem; flex-wrap: wrap; align-items: flex-start; }
+    .pad { display: grid; grid-template-columns: repeat(3, 56px);
+           gap: 6px; margin-top: 1rem; }
+    button { padding: 14px; font-size: 18px; border-radius: 8px; cursor: pointer; }
+    .status { font-size: 14px; line-height: 1.8; }
+    .badge { padding: 2px 10px; border-radius: 6px; background:#eee; }
+  </style>
+</head>
+<body>
+  <h1>S.A.F.E Dashboard</h1>
+  <div class="row">
+    <div>
+      <img id="stream" src="/stream" alt="kamera tidak aktif">
+    </div>
+    <div>
+      <div class="status">
+        State : <span id="state" class="badge">-</span><br>
+        Mode  : <span id="mode" class="badge">auto</span><br>
+        Deteksi: <span id="det" class="badge">-</span>
+      </div>
+
+      <p>
+        <button onclick="setMode('auto')">AUTO</button>
+        <button onclick="setMode('manual')">MANUAL</button>
+      </p>
+
+      <!-- Joystick sederhana (manual saja) -->
+      <div class="pad">
+        <span></span>
+        <button onclick="jog(0, -STEP)">▲</button>
+        <span></span>
+        <button onclick="jog(-STEP, 0)">◄</button>
+        <button onclick="jog(0, 0)">■</button>
+        <button onclick="jog(STEP, 0)">►</button>
+        <span></span>
+        <button onclick="jog(0, STEP)">▼</button>
+        <span></span>
+      </div>
+    </div>
+  </div>
+
+<script>
+const STEP = 3.0;                 // = WEB_JOG_STEP_DEG
+let manual = false;
+
+// --- terima status real-time via SSE ---
+const es = new EventSource("/events");
+es.onmessage = (e) => {
+  const m = JSON.parse(e.data);
+  if (m.type === "state") document.getElementById("state").textContent = m.value;
+  if (m.type === "mode")  {
+    document.getElementById("mode").textContent = m.value;
+    manual = (m.value === "manual");
+  }
+  if (m.type === "detection")
+    document.getElementById("det").textContent =
+      "conf " + m.confidence.toFixed(2);
+};
+
+async function setMode(mode) {
+  await fetch("/cmd/mode", {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ mode })
+  });
+}
+
+async function jog(d_yaw, d_pitch) {
+  await fetch("/cmd/jog", {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ d_yaw, d_pitch })
+  });
+}
+
+// --- heartbeat: kabari server UI masih aktif (tiap 2 dtk saat manual) ---
+setInterval(() => {
+  if (manual) fetch("/heartbeat", { method: "POST" });
+}, 2000);
+</script>
+</body>
+</html>
+```
+
+### 11.7 Memasang di main.py
+
+Satu blok tambahan, sisanya tak berubah:
+
+```python
+from web.web_bridge import WebBridge
+
+# di build_system(), setelah modul lain dibuat:
+web = WebBridge(bus, host=config.WEB_HOST, port=config.WEB_PORT)
+modules.append(web)
+```
+
+### 11.8 Testing web
+
+- **Tanpa hardware & tanpa YOLO**: jalankan sistem dengan `FakeDetector`. Buka `http://<ip-pi>:8000`. Status state berubah saat `FakeDetector` menyuntik api palsu. `/stream` menampilkan placeholder (belum ada `frame_update`).
+- **Joystick**: toggle MANUAL, tekan tombol arah, amati log `servo_jog` (atau gerakan servo bila hardware terpasang).
+- **Heartbeat**: masuk MANUAL, tutup tab browser, tunggu `WEB_HEARTBEAT_TIMEOUT` detik — sistem harus otomatis kembali ke AUTO (cek log `mode_changed`).
+- **Stream nyata**: aktif otomatis begitu `YOLODetector` mem-publish `frame_update`.
+
+---
+
+## 12. Roadmap Integrasi
 
 | Tahap | Pekerjaan | Status |
 |---|---|---|
@@ -871,9 +1297,10 @@ Karena Event Bus memisahkan modul, Anda bisa menyuntik event palsu dari shell un
 | 6 | Hardware-in-the-loop per modul di Pi 5 | Menunggu rakitan |
 | 7 | Latih YOLOv8 Nano, ekspor model | Belum mulai |
 | 8 | Implementasi `YOLODetector`, ganti `FakeDetector` di `main.py` | Placeholder siap |
-| 9 | Lapisan opsional: Telegram, logging CSV, PDF, dashboard | Belum mulai |
+| 9 | Antarmuka web: `WebBridge` + dashboard (stream, status, joystick, mode AUTO/MANUAL) | Spesifikasi siap |
+| 10 | Lapisan opsional lain: Telegram, logging CSV, PDF | Belum mulai |
 
-Catatan: lapisan opsional (tahap 9) ditempel di *tepi* sistem — modul baru yang subscribe `state_changed` / `extinguish_done`, tanpa menyentuh inti.
+Catatan: lapisan opsional (tahap 9–10) ditempel di *tepi* sistem — modul baru yang subscribe `state_changed` / `frame_update` / `extinguish_done`, tanpa menyentuh inti. Web (tahap 9) hanya butuh `YOLODetector` aktif agar stream kamera hidup; status, mode, dan joystick sudah berfungsi tanpa YOLO.
 
 ---
 

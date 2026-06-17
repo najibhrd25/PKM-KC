@@ -40,3 +40,9 @@ AUDIO_COOLDOWN      = 30.0  # detik jeda wajib setelah operasi [SAFETY]
 # ======================= ORCHESTRATOR =======================
 PRE_ALARM_TIMEOUT   = 10.0  # detik; jika tak ada konfirmasi visual, batal ke IDLE
 EVAL_RECHECK_DELAY  = 2.0   # detik; jeda sebelum evaluasi api padam/belum
+
+# ======================= WEB (opsional) =======================
+WEB_HOST              = "0.0.0.0"
+WEB_PORT              = 8000
+WEB_HEARTBEAT_TIMEOUT = 5.0   # detik; UI dianggap hilang -> balik ke AUTO
+WEB_JOG_STEP_DEG      = 3.0   # derajat per input joystick (dipakai frontend)

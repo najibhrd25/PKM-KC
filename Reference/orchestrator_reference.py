@@ -42,11 +42,15 @@ class Orchestrator:
         self._running = False
         self._timer_thread: threading.Thread | None = None
 
+        # mode operasi: "auto" (default) atau "manual"
+        self._mode = "auto"
+
         # subscribe event masuk
         self._bus.subscribe(events.IR_READING, self._on_ir)
         self._bus.subscribe(events.FIRE_DETECTED, self._on_fire_detected)
         self._bus.subscribe(events.FIRE_CLEARED, self._on_fire_cleared)
         self._bus.subscribe(events.TARGET_LOCKED, self._on_target_locked)
+        self._bus.subscribe(events.SET_MODE, self._on_set_mode)
 
     # ======================= LIFECYCLE =======================
     def start(self):
@@ -133,8 +137,26 @@ class Orchestrator:
         if self._state == State.TRACKING:
             self._transition(State.EXTINGUISHING)
 
+    def _on_set_mode(self, data: dict):
+        """Switch AUTO <-> MANUAL dari WebBridge (atau heartbeat timeout)."""
+        mode = data.get("mode", "auto")
+        self._mode = mode
+        if mode == "manual":
+            # hentikan operasi otomatis yang sedang berjalan demi keamanan
+            self._bus.publish(events.AUDIO_STOP, {})
+            self._bus.publish(events.TRACK_STOP, {})
+            self._transition(State.MANUAL)
+        else:
+            self._transition(State.IDLE)   # kembali siaga otomatis
+        self._bus.publish(events.MODE_CHANGED, {"mode": mode})
+
     # ======================= LOGIKA FUSI SENSOR =======================
     def _evaluate_fusion(self):
+        # mode manual: fusi dijeda. Event tetap ter-cache untuk dashboard,
+        # tapi tidak memicu transisi state.
+        if self._mode == "manual":
+            return
+
         ir_hot = any(r.get("triggered") for r in self._ir_readings.values())
         visual = (self._last_detection is not None and
                   self._last_detection.get("confidence", 0.0)

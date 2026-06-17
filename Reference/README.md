@@ -7,6 +7,7 @@ Tiga berkas dalam paket ini:
 | `ARCHITECTURE.md` | Dokumen utama: filosofi desain, Event Bus, struktur folder, kontrak event, state machine, interface tiap modul, alur eksekusi, dependency injection, strategi testing, dan roadmap. **Baca ini lebih dulu.** |
 | `config_reference.py` | Contoh `config.py` — semua parameter tuning & keamanan terpusat. Salin ke `safe/core/config.py`. |
 | `orchestrator_reference.py` | Implementasi referensi lengkap Orchestrator (otak sistem). Salin ke `safe/orchestrator.py`. |
+| `web_bridge_reference.py` | Implementasi referensi `WebBridge` (antarmuka web opsional: stream, status, joystick, mode). Salin ke `safe/web/web_bridge.py`. |
 
 ## Cara Memulai
 
