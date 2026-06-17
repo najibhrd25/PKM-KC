@@ -19,7 +19,7 @@ from pydub import AudioSegment
 SOUND_FILE = "tolong_BPxrsyS.mp3"
 DEVICE = 0  # index dari list_devices() - 0 = snd_rpi_hifiberry_dac
 
-
+# testing
 # ======================= LOAD AUDIO =======================
 def load_sound(path):
     """Load file audio (mp3/wav dll) -> (signal float32 -1.0..1.0, sample_rate)."""
