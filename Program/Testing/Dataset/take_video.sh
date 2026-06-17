@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
-# take_video.sh — Rekam video dataset SAFE dari kamera Raspberry Pi,
-# dengan preview live via VLC di laptop selagi merekam.
+# take_video.sh — Rekam video dataset SAFE dari kamera Raspberry Pi.
 #
-# Jalankan LANGSUNG DI RASPBERRY PI (folder ini, atau folder mana pun
-# selama path tujuan disesuaikan). Membutuhkan rpicam-vid dan nc (netcat).
+# Rekam LANGSUNG ke file (tanpa streaming bersamaan) supaya hasilnya selalu
+# utuh. Kalau perlu cek framing/posisi kamera dulu, jalankan preview.sh
+# SEBELUM script ini (preview tidak menyimpan file, hanya live view).
+#
+# Jalankan LANGSUNG DI RASPBERRY PI. Membutuhkan rpicam-vid.
 #
 # Penggunaan:
 #   ./take_video.sh <nama_skenario> [durasi_detik]
@@ -12,9 +14,6 @@
 #   ./take_video.sh api_jarak1m 60
 #   ./take_video.sh api_gelap        # durasi default 30 detik
 #
-# Preview saat rekam (dari laptop, buka VLC):
-#   Media > Open Network Stream > tcp/mjpeg://<IP_PI>:8888
-#
 # Hasil rekaman disimpan di: Dataset/raw/<nama_skenario>.mjpeg
 
 set -euo pipefail
@@ -22,7 +21,6 @@ set -euo pipefail
 NAME="${1:?Nama skenario wajib diisi. Contoh: ./take_video.sh api_jarak1m 60}"
 DURATION_SEC="${2:-30}"
 DURATION_MS=$((DURATION_SEC * 1000))
-PORT=8888
 
 OUT_DIR="$(cd "$(dirname "$0")" && pwd)/raw"
 mkdir -p "$OUT_DIR"
@@ -34,13 +32,10 @@ if [ -f "$OUT_FILE" ]; then
 fi
 
 echo "=== Rekam '$NAME' selama ${DURATION_SEC} detik ==="
-echo "Preview : buka VLC -> tcp/mjpeg://<IP_PI>:${PORT}"
-echo "Output  : $OUT_FILE"
+echo "Output : $OUT_FILE"
 echo ""
 
-rpicam-vid -t "$DURATION_MS" --codec mjpeg --inline -o - \
-    | tee "$OUT_FILE" \
-    | nc -l -p "$PORT"
+rpicam-vid -t "$DURATION_MS" --codec mjpeg --inline -o "$OUT_FILE" --nopreview
 
 echo ""
 echo "Selesai. Tersimpan: $OUT_FILE ($(du -h "$OUT_FILE" | cut -f1))"
