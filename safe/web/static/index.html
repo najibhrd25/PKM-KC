@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>S.A.F.E. Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a0a; color: #e0e0e0; font-family: 'Courier New', monospace; }
+    header { padding: 16px 24px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
+    header h1 { font-size: 14px; letter-spacing: 3px; color: #ff4444; }
+    #state-badge { font-size: 11px; padding: 4px 12px; background: #1a1a1a; border: 1px solid #333; border-radius: 3px; }
+    main { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 16px 24px; max-width: 960px; margin: 0 auto; }
+    .panel { background: #111; border: 1px solid #222; padding: 16px; }
+    .panel h2 { font-size: 10px; letter-spacing: 2px; color: #888; margin-bottom: 12px; }
+    #cam { width: 100%; aspect-ratio: 4/3; background: #050505; display: flex; align-items: center; justify-content: center; color: #333; }
+    #cam img { width: 100%; height: 100%; object-fit: contain; }
+    #log { max-height: 200px; overflow-y: auto; font-size: 11px; color: #777; }
+    #log div { padding: 4px 0; border-bottom: 1px solid #1a1a1a; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>S.A.F.E. MISSION CONTROL</h1>
+    <span id="state-badge">IDLE</span>
+  </header>
+  <main>
+    <div class="panel" style="grid-column: span 2;">
+      <h2>LIVE FEED</h2>
+      <div id="cam"><img src="/stream" alt="Live camera feed"></div>
+    </div>
+    <div class="panel">
+      <h2>EVENT LOG</h2>
+      <div id="log"></div>
+    </div>
+    <div class="panel">
+      <h2>STATUS</h2>
+      <p style="font-size: 11px; color: #888;">
+        Hubungkan <strong>safe-dashboard</strong> mobile app atau gunakan
+        halaman ini untuk memantau status sistem secara langsung.
+      </p>
+    </div>
+  </main>
+  <script>
+    const badge = document.getElementById('state-badge');
+    const log   = document.getElementById('log');
+
+    const es = new EventSource('/events');
+    es.onmessage = (e) => {
+      const d = JSON.parse(e.data);
+      const entry = document.createElement('div');
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${d.type}: ${JSON.stringify(d)}`;
+      log.prepend(entry);
+
+      if (d.type === 'state') badge.textContent = d.value.toUpperCase();
+    };
+  </script>
+</body>
+</html>
