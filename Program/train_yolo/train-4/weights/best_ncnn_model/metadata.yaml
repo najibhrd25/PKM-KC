@@ -1,0 +1,20 @@
+description: Ultralytics best model trained on dataset_master\data.yaml
+author: Ultralytics
+date: '2026-07-08T12:42:07.444655'
+version: 8.4.90
+license: AGPL-3.0 License (https://ultralytics.com/license)
+docs: https://docs.ultralytics.com
+stride: 32
+task: detect
+head: Detect
+batch: 1
+imgsz:
+- 640
+- 640
+names:
+  0: api
+args:
+  batch: 1
+  quantize: 16
+channels: 3
+end2end: false

@@ -37,9 +37,16 @@ import adafruit_ads1x15.ads1115 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
 
 # ======================= KONFIGURASI =======================
-ADDR_BOARD_1 = 0x48  # sensor IR 1-4 (A0-A3)
-ADDR_BOARD_2 = 0x49  # sensor IR 5 (A0)
-READ_INTERVAL = 0.5  # detik
+ADDR_BOARD_2 = 0x48  # sensor IR 1-4 (A0-A3)
+ADDR_BOARD_1 = 0x49  # sensor IR 5 (A0)
+READ_INTERVAL = 0.1  # detik
+
+# ------ Konfigurasi visualisasi bar ------
+BAR_WIDTH = 30        # lebar bar maksimum (karakter)
+RAW_MAX = 32767       # nilai raw full-scale ADS1115 single-ended (16-bit positif)
+# Selisih minimum antara sensor tertinggi dengan rata-rata sensor lain agar
+# dianggap ada api. Bila semua sensor mirip (selisih < ambang) = tidak ada api.
+DIFF_THRESHOLD = 200
 
 
 # ======================= INISIALISASI =======================
@@ -71,6 +78,14 @@ def read_all_sensors(channels):
     return [read_sensor(channel) for channel in channels]
 
 
+# ======================= VISUALISASI =======================
+def render_bar(raw, max_raw=RAW_MAX, width=BAR_WIDTH):
+    """Ubah nilai raw menjadi string bar ASCII sepanjang `width`."""
+    ratio = 0.0 if max_raw <= 0 else max(0.0, min(1.0, raw / max_raw))
+    filled = int(ratio * width)
+    return "#" * filled + "-" * (width - filled)
+
+
 # ======================= PROGRAM UTAMA =======================
 if __name__ == "__main__":
     sensor_channels = init_sensors()
@@ -79,9 +94,27 @@ if __name__ == "__main__":
     try:
         while True:
             readings = read_all_sensors(sensor_channels)
-            for i, data in enumerate(readings, start=1):
-                print(f"Sensor IR {i}: raw={data['raw']:6d}  voltage={data['voltage']:.4f} V")
-            print("-" * 40)
+            raws = [data["raw"] for data in readings]
+            idx_max = raws.index(max(raws))  # kandidat area api paling intens
+
+            # Ada api hanya bila sensor tertinggi menonjol dari sensor lain.
+            # Bila semua sensor mirip (selisih < DIFF_THRESHOLD) = tidak ada api.
+            others = raws[:idx_max] + raws[idx_max + 1:]
+            avg_others = sum(others) / len(others) if others else 0
+            selisih = raws[idx_max] - avg_others
+            api_terdeteksi = selisih >= DIFF_THRESHOLD
+
+            print("\033[H\033[J", end="")  # bersihkan layar + kursor ke atas
+            print("Visualisasi 5 Sensor IR (Ctrl+C untuk berhenti)\n")
+            for i, data in enumerate(readings):
+                bar = render_bar(data["raw"])
+                mark = "  <-- API" if i == idx_max and api_terdeteksi else ""
+                print(
+                    f"IR {i + 1} |{bar}| raw={data['raw']:6d}  {data['voltage']:.3f} V{mark}"
+                )
+            status = f"API di IR {idx_max + 1} (selisih {selisih:.0f})" if api_terdeteksi \
+                else f"Tidak ada api (selisih {selisih:.0f} < {DIFF_THRESHOLD})"
+            print(f"\nStatus: {status}")
             time.sleep(READ_INTERVAL)
     except KeyboardInterrupt:
         print("\nProgram dihentikan.")
