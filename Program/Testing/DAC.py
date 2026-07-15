@@ -10,6 +10,9 @@ Setup Hardware (wiring ke Raspberry Pi):
     BCK = GPIO18 (PCM CLK)
     SCK = GND
 
+cd /home/safe/Smart-Acoustic-Fire-Extinguisher
+source .venv/bin/activate
+
 Setup Software (Raspberry Pi):
     1. Edit /boot/config.txt:
         - Tambahkan: dtoverlay=hifiberry-dac

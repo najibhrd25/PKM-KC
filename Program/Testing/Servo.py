@@ -37,7 +37,7 @@ PROTOCOL_VERSION = 1.0
 # Pi 5: /dev/serial0 -> ttyAMA10 (UART Bluetooth, bukan GPIO14/15).
 # Dengan dtparam=uart0=on, GPIO14/15 muncul sebagai /dev/ttyAMA0.
 DEVICENAME = "/dev/ttyAMA0"
-BAUDRATE = 1000000
+BAUDRATE = 57600  # default baudrate MX-106: 57600, bisa diubah ke 1M (57600->1M) via R+ Manager
 
 # Control table address (Protocol 1.0 - MX-106)
 ADDR_CW_ANGLE_LIMIT = 6

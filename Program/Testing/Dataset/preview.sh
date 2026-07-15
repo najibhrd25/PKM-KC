@@ -14,6 +14,14 @@
 #
 # Di laptop, buka VLC:
 #   Media > Open Network Stream > tcp/mjpeg://<IP_PI>:8888
+# safe@safe:~/Smart-Acoustic-Fire-Extinguisher/train yolo $ rpicam-hello --list-cameras
+# Available cameras
+# -----------------
+# 0 : ov5647 [2592x1944 10-bit GBRG] (/base/axi/pcie@1000120000/rp1/i2c@80000/ov5647@36)
+#     Modes: 'SGBRG10_CSI2P' : 640x480 [62.50 fps - (16, 0)/2560x1920 crop]
+#                              1296x972 [46.34 fps - (0, 0)/2592x1944 crop]
+#                              1920x1080 [32.81 fps - (348, 434)/1928x1080 crop]
+#                              2592x1944 [15.63 fps - (0, 0)/2592x1944 crop]
 
 set -euo pipefail
 
