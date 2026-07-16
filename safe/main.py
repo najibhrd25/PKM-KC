@@ -62,7 +62,7 @@ def build_system(use_fake_detector=True, use_web=False):
 
 
 def main():
-    bus, orchestrator, modules = build_system(use_fake_detector=True, use_web=False)
+    bus, orchestrator, modules = build_system(use_fake_detector=True, use_web=True)
 
     bus.start()
     orchestrator.start()

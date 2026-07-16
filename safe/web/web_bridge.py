@@ -157,17 +157,39 @@ class WebBridge(BaseModule):
             })
             return JSONResponse({"ok": True})
 
+
+        @app.post("/cmd/home")
+        async def home(req: Request):
+            self._bus.publish(events.SERVO_HOME, {})
+            return JSONResponse({"ok": True})
+
+        @app.post("/cmd/stop")
+        async def stop_actuators(req: Request):
+            self._bus.publish(events.AUDIO_STOP, {})
+            self._bus.publish(events.TRACK_STOP, {})
+            self._bus.publish(events.SERVO_HOME, {})
+            return JSONResponse({"ok": True})
+
+
+
         @app.post("/cmd/shoot")
         async def shoot(req: Request):
             """Pemadaman manual — hanya diizinkan saat MANUAL mode."""
             body = await req.json()
             freq = float(body.get("frequency", config.AUDIO_DEFAULT_FREQ))
+            amp = float(body.get("amplitude", config.AMPLITUDE_MAX_SAFE))
+            dur = float(body.get("duration", config.AUDIO_MAX_DURATION))
+            waveform = body.get("waveform", "sine")
+            
             self._bus.publish(events.AUDIO_CMD, {
                 "freq": freq,
-                "amplitude": config.AMPLITUDE_MAX_SAFE,
-                "duration": config.AUDIO_MAX_DURATION,
+                "amplitude": amp,
+                "duration": dur,
+                "waveform": waveform,
             })
-            return JSONResponse({"ok": True, "frequency": freq})
+            return JSONResponse({"ok": True, "frequency": freq, "amplitude": amp, "duration": dur, "waveform": waveform})
+
+
 
         @app.post("/heartbeat")
         def heartbeat():

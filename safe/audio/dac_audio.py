@@ -36,11 +36,26 @@ class DACAudio(BaseAudio):
                   config.AMPLITUDE_MAX_SAFE)               # hard limit
         dur = min(float(data.get("duration", config.AUDIO_MAX_DURATION)),
                   config.AUDIO_MAX_DURATION)               # hard limit
+        waveform = data.get("waveform", "sine").lower()
 
         def _play():
             self._playing = True
-            signal = drv.generate_sine(freq, dur, amplitude=amp)
-            drv.play(signal, label=f"Pemadaman {freq} Hz")
+            if waveform == "square":
+                signal = drv.generate_square(freq, dur, amplitude=amp)
+            elif waveform == "sawtooth":
+                signal = drv.generate_sawtooth(freq, dur, amplitude=amp)
+            elif waveform == "triangle":
+                signal = drv.generate_triangle(freq, dur, amplitude=amp)
+            elif waveform == "sweep":
+                # Sweep from 20Hz up to target freq
+                signal = drv.generate_sweep(20, freq, dur, amplitude=amp)
+            elif waveform == "pulse":
+                n_cycles = max(1, int(freq * dur))
+                signal = drv.generate_pulse(freq, n_cycles=n_cycles, amplitude=amp, waveform="sine")
+            else:
+                signal = drv.generate_sine(freq, dur, amplitude=amp)
+                
+            drv.play(signal, label=f"Pemadaman {waveform.upper()} {freq} Hz")
             self._playing = False
 
         threading.Thread(target=_play, daemon=True).start()
