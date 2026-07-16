@@ -37,9 +37,9 @@ import adafruit_ads1x15.ads1115 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
 
 # ======================= KONFIGURASI =======================
-ADDR_BOARD_1 = 0x48  # sensor IR 1-4 (A0-A3)
-ADDR_BOARD_2 = 0x49  # sensor IR 5 (A0)
-READ_INTERVAL = 0.5  # detik
+ADDR_BOARD_2 = 0x48  # sensor IR 1-4 (A0-A3)
+ADDR_BOARD_1 = 0x49  # sensor IR 5 (A0)
+READ_INTERVAL = 0.3  # detik
 
 
 # ======================= INISIALISASI =======================
@@ -49,6 +49,10 @@ def init_sensors():
 
     ads1 = ADS.ADS1115(i2c, address=ADDR_BOARD_1)
     ads2 = ADS.ADS1115(i2c, address=ADDR_BOARD_2)
+
+    # data rate maksimum (default 128 SPS -> ~8 ms/konversi; 860 SPS -> ~1.2 ms)
+    ads1.data_rate = 860
+    ads2.data_rate = 860
 
     channels = [
         AnalogIn(ads1, 0),  # Sensor IR 1
@@ -62,8 +66,15 @@ def init_sensors():
 
 # ======================= PEMBACAAN =======================
 def read_sensor(channel):
-    """Baca satu channel AnalogIn, return dict raw value & voltage."""
-    return {"raw": channel.value, "voltage": channel.voltage}
+    """Baca satu channel AnalogIn, return dict raw value & voltage.
+
+    Satu konversi ADC saja: properti .value dan .voltage masing-masing
+    memicu konversi single-shot terpisah. Baca raw sekali, lalu hitung
+    voltage dari raw yang sama via convert_to_voltage (aritmetika murni,
+    tanpa konversi kedua).
+    """
+    raw = channel.value
+    return {"raw": raw, "voltage": channel.convert_to_voltage(raw)}
 
 
 def read_all_sensors(channels):

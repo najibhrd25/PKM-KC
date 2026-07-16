@@ -23,6 +23,8 @@ AUDIO_STOP      = "audio_stop"       # Orchestrator -> DAC
 STATE_CHANGED   = "state_changed"    # Orchestrator -> siapa saja
 TARGET_LOCKED   = "target_locked"    # Tracking     -> Orchestrator
 EXTINGUISH_DONE = "extinguish_done"  # Orchestrator -> siapa saja
+AUDIO_STATE     = "audio_state"      # DACAudio      -> bus {playing, freq, waveform, ...}
+SERVO_STATE     = "servo_state"      # ServoActuator -> bus {yaw_deg, pitch_deg, torque}
 
 # ---- Event antarmuka web (OPSIONAL, tepi sistem) ----
 FRAME_UPDATE    = "frame_update"     # YOLO        -> WebBridge (stream MJPEG)

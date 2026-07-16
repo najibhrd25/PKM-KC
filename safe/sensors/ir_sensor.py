@@ -1,6 +1,8 @@
 """
 IRSensorArray — bungkus driver IR.py menjadi modul Event Bus.
-Driver asli (_ir_driver.py = IR.py) tidak diubah.
+Driver (_ir_driver.py = IR.py) dioptimalkan dari versi asli: data rate
+ADS1115 dinaikkan ke 860 SPS dan satu konversi ADC per sensor (voltage
+dihitung dari raw), supaya sapuan 5 sensor selesai dalam puluhan ms.
 """
 import threading
 import logging
@@ -37,6 +39,7 @@ class IRSensorArray(BaseSensor):
             for i, data in enumerate(readings, start=1):
                 self._bus.publish(events.IR_READING, {
                     "sensor_id": i,
+                    "raw": data["raw"],
                     "voltage": data["voltage"],
                     "triggered": data["voltage"] >= config.IR_THRESHOLD_V,
                 })

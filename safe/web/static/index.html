@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>S.A.F.E — Dashboard</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: #0e1116; color: #e6edf3;
+    }
+    header { padding: 14px 20px; background: #161b22; border-bottom: 1px solid #30363d; }
+    header h1 { margin: 0; font-size: 18px; letter-spacing: .5px; }
+    header small { color: #8b949e; }
+    .wrap { display: flex; flex-wrap: wrap; gap: 20px; padding: 20px; }
+    .panel { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 16px; }
+    .main { flex: 1 1 480px; min-width: 320px; display: flex; flex-direction: column; gap: 16px; }
+    .stream img { width: 100%; border-radius: 8px; background: #000; display: block; }
+    .side { flex: 0 1 320px; display: flex; flex-direction: column; gap: 16px; }
+    .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .badge { padding: 4px 10px; border-radius: 999px; font-weight: 600; font-size: 13px; background: #21262d; }
+    .badge.state { background: #1f6feb33; color: #79c0ff; }
+    .badge.mode-auto { background: #2ea04333; color: #7ee787; }
+    .badge.mode-manual { background: #d2992233; color: #e3b341; }
+    .badge.audio-on { background: #2ea04333; color: #7ee787; }
+    .badge.audio-off { background: #21262d; color: #8b949e; }
+    .badge.hot { background: #f8514933; color: #ff7b72; }
+    button {
+      cursor: pointer; border: 1px solid #30363d; background: #21262d; color: #e6edf3;
+      border-radius: 8px; padding: 10px 14px; font-size: 14px;
+    }
+    button:hover { background: #30363d; }
+    button.primary { background: #238636; border-color: #2ea043; }
+    button.danger { background: #da363333; border-color: #f8514966; }
+    button:disabled, input:disabled, select:disabled {
+      opacity: .4; cursor: not-allowed;
+    }
+    input[type=number], select {
+      background: #0e1116; color: #e6edf3; border: 1px solid #30363d;
+      border-radius: 6px; padding: 7px 9px; font-size: 14px; width: 90px;
+    }
+    select { width: auto; }
+    label.fld { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #8b949e; }
+    .muted { color: #8b949e; font-size: 13px; }
+    #det, #servoPos { font-variant-numeric: tabular-nums; }
+    /* -------- joystick -------- */
+    #joyBase {
+      width: 180px; height: 180px; border-radius: 50%;
+      background: #0e1116; border: 1px solid #30363d;
+      position: relative; touch-action: none; margin: 4px auto;
+    }
+    #joyKnob {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: #21262d; border: 1px solid #484f58;
+      position: absolute; left: 50%; top: 50%;
+      transform: translate(-50%, -50%); cursor: grab;
+    }
+    #joyKnob.active { background: #1f6feb55; border-color: #1f6feb; cursor: grabbing; }
+    .manual-off #joyBase { opacity: .4; }
+    /* -------- sensor IR -------- */
+    .irbars { display: flex; gap: 12px; align-items: flex-end; margin: 10px 0 4px; }
+    .irbar { flex: 1; text-align: center; }
+    .irbar .col {
+      position: relative; height: 90px; background: #0e1116;
+      border: 1px solid #30363d; border-radius: 6px; overflow: hidden;
+    }
+    .irbar .fill {
+      position: absolute; left: 0; right: 0; bottom: 0; height: 0%;
+      background: #1f6feb88; transition: height .12s, background .12s;
+    }
+    .irbar.hot .fill { background: #f85149cc; }
+    .irbar .thresh {
+      position: absolute; left: 0; right: 0; border-top: 1px dashed #e3b341aa;
+    }
+    .irbar .val { font-size: 11px; color: #8b949e; margin-top: 4px;
+                  font-variant-numeric: tabular-nums; }
+    .irgauge {
+      position: relative; height: 14px; border-radius: 999px;
+      background: #0e1116; border: 1px solid #30363d; margin-top: 10px;
+    }
+    .irgauge .mid {
+      position: absolute; left: 50%; top: 0; bottom: 0;
+      border-left: 1px solid #30363d;
+    }
+    #irMarker {
+      position: absolute; top: 50%; width: 12px; height: 12px;
+      border-radius: 50%; background: #f85149; display: none;
+      transform: translate(-50%, -50%); transition: left .12s;
+    }
+    /* -------- log -------- */
+    #logList {
+      max-height: 240px; overflow-y: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px; line-height: 1.7; background: #0e1116;
+      border: 1px solid #30363d; border-radius: 8px; padding: 8px 10px;
+    }
+    #logList .t { color: #8b949e; margin-right: 8px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>S.A.F.E <small>— Smart Acoustic Fire Extinguisher</small></h1>
+  </header>
+
+  <div class="wrap">
+    <div class="main">
+      <div class="panel stream">
+        <img id="stream" src="/stream" alt="Live camera" />
+      </div>
+
+      <div class="panel">
+        <div class="row">
+          <span class="muted">Sensor IR</span>
+          <span id="irStatus" class="badge audio-off">tidak ada panas</span>
+        </div>
+        <div class="irbars" id="irBars"></div>
+        <div class="irgauge"><div class="mid"></div><div id="irMarker"></div></div>
+        <div class="row" style="justify-content:space-between; margin-top:4px">
+          <span class="muted">kiri</span>
+          <span class="muted" id="irDir">arah: —</span>
+          <span class="muted">kanan</span>
+        </div>
+        <div class="muted" style="margin-top:6px">
+          Garis putus-putus = ambang 1.5 V; bar merah = sensor terpicu.
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="muted" style="margin-bottom:10px">Log kejadian</div>
+        <div id="logList"></div>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="panel">
+        <div class="row"><span class="muted">State</span>
+          <span id="state" class="badge state">—</span></div>
+        <div class="row" style="margin-top:10px"><span class="muted">Mode</span>
+          <span id="mode" class="badge mode-auto">auto</span></div>
+        <div class="row" style="margin-top:10px"><span class="muted">Deteksi</span>
+          <span id="det" class="muted">tidak ada</span></div>
+      </div>
+
+      <div class="panel">
+        <div class="muted" style="margin-bottom:10px">Mode operasi</div>
+        <div class="row">
+          <button id="btnAuto" class="primary" onclick="setMode('auto')">AUTO</button>
+          <button id="btnManual" onclick="setMode('manual')">MANUAL</button>
+        </div>
+      </div>
+
+      <div class="panel" id="servoPanel">
+        <div class="muted" style="margin-bottom:6px">Kontrol servo (manual)</div>
+        <div id="joyBase"><div id="joyKnob"></div></div>
+        <div class="row" style="margin-top:6px; justify-content:center">
+          <span class="muted">Posisi:</span>
+          <span id="servoPos">yaw 180.0° / pitch 180.0°</span>
+          <span id="torque" class="badge audio-off">torque ?</span>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <label class="fld">yaw (135–225°)
+            <input class="manual-ctl" type="number" id="yawIn" min="135" max="225" step="0.5" value="180"></label>
+          <label class="fld">pitch (135–225°)
+            <input class="manual-ctl" type="number" id="pitchIn" min="135" max="225" step="0.5" value="180"></label>
+          <button class="manual-ctl" onclick="servoCmd('move')" style="align-self:flex-end">Go</button>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <button class="manual-ctl" onclick="servoCmd('home')">⌂ Home</button>
+          <button class="danger" onclick="servoCmd('torque_off')">Torque OFF</button>
+        </div>
+      </div>
+
+      <div class="panel" id="audioPanel">
+        <div class="row" style="margin-bottom:10px">
+          <span class="muted">Audio / DAC (manual)</span>
+          <span id="audioState" class="badge audio-off">stopped</span>
+        </div>
+        <div class="row">
+          <label class="fld">waveform
+            <select class="manual-ctl" id="waveform" onchange="onWaveformChange()">
+              <option value="sine" selected>sine</option>
+              <option value="square">square</option>
+              <option value="sawtooth">sawtooth</option>
+              <option value="triangle">triangle</option>
+              <option value="sweep">sweep</option>
+              <option value="pulse">pulse</option>
+            </select></label>
+          <label class="fld">freq (Hz)
+            <input class="manual-ctl" type="number" id="freqIn" min="1" step="1" value="45"></label>
+          <label class="fld">amplitudo (maks <span id="ampMax">0.3</span>)
+            <input class="manual-ctl" type="number" id="ampIn" min="0" max="0.3" step="0.01" value="0.3"></label>
+          <label class="fld">durasi (dtk, maks <span id="durMax">30</span>)
+            <input class="manual-ctl" type="number" id="durIn" min="0.5" max="30" step="0.5" value="10"></label>
+        </div>
+        <div class="row" id="sweepFields" style="margin-top:10px; display:none">
+          <label class="fld">f_start (Hz)
+            <input class="manual-ctl" type="number" id="fStartIn" min="1" step="1" value="30"></label>
+          <label class="fld">f_end (Hz)
+            <input class="manual-ctl" type="number" id="fEndIn" min="1" step="1" value="90"></label>
+        </div>
+        <div class="row" id="pulseFields" style="margin-top:10px; display:none">
+          <label class="fld">n_cycles
+            <input class="manual-ctl" type="number" id="nCyclesIn" min="1" step="1" value="1"></label>
+          <label class="fld">pulse waveform
+            <select class="manual-ctl" id="pulseWaveform">
+              <option value="sine" selected>sine</option>
+              <option value="square">square</option>
+            </select></label>
+          <label class="row" style="font-size:13px; color:#8b949e">
+            <input class="manual-ctl" type="checkbox" id="invertedIn"> inverted</label>
+          <label class="row" style="font-size:13px; color:#8b949e">
+            <input class="manual-ctl" type="checkbox" id="halfCycleIn"> half cycle</label>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button class="primary manual-ctl" onclick="audioCmd('play')">▶ Audio ON</button>
+          <button class="danger" onclick="audioCmd('stop')">■ Audio OFF</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // batas & default — dimutakhirkan dari GET /config (core/config.py)
+    let LIMITS = {
+      freq_default: 45, amplitude_max: 0.3, duration_max: 30,
+      yaw_min: 135, yaw_max: 225, pitch_min: 135, pitch_max: 225,
+      jog_step_deg: 3.0, ir_threshold_v: 1.5, n_ir: 5, ir_reverse: true,
+    };
+    let mode = "auto";
+
+    function setBadge(el, text, cls) { el.textContent = text; el.className = "badge " + cls; }
+
+    // -------- mode --------
+    function setManualEnabled(on) {
+      document.querySelectorAll(".manual-ctl").forEach(el => el.disabled = !on);
+      document.getElementById("servoPanel").classList.toggle("manual-off", !on);
+      document.getElementById("audioPanel").classList.toggle("manual-off", !on);
+    }
+
+    function applyMode(m) {
+      mode = m;
+      setBadge(document.getElementById("mode"), m, "mode-" + m);
+      document.getElementById("btnAuto").className = (m === "auto") ? "primary" : "";
+      document.getElementById("btnManual").className = (m === "manual") ? "primary" : "";
+      setManualEnabled(m === "manual");
+    }
+
+    async function setMode(m) {
+      applyMode(m);
+      await fetch("/cmd/mode", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: m })
+      });
+    }
+
+    // -------- joystick virtual --------
+    const joyBase = document.getElementById("joyBase");
+    const joyKnob = document.getElementById("joyKnob");
+    let joyNX = 0, joyNY = 0, joyTimer = null;
+
+    function joyUpdate(clientX, clientY) {
+      const r = joyBase.getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const maxR = r.width / 2 - 32;               // radius gerak knob
+      let dx = clientX - cx, dy = clientY - cy;
+      const d = Math.hypot(dx, dy);
+      if (d > maxR) { dx *= maxR / d; dy *= maxR / d; }
+      joyKnob.style.left = `calc(50% + ${dx}px)`;
+      joyKnob.style.top = `calc(50% + ${dy}px)`;
+      joyNX = dx / maxR; joyNY = dy / maxR;        // ternormalisasi -1..+1
+    }
+
+    function joyReset() {
+      joyNX = joyNY = 0;
+      joyKnob.style.left = "50%"; joyKnob.style.top = "50%";
+      joyKnob.classList.remove("active");
+      if (joyTimer) { clearInterval(joyTimer); joyTimer = null; }
+    }
+
+    joyKnob.addEventListener("pointerdown", (ev) => {
+      if (mode !== "manual") return;
+      joyKnob.setPointerCapture(ev.pointerId);
+      joyKnob.classList.add("active");
+      joyUpdate(ev.clientX, ev.clientY);
+      joyTimer = setInterval(() => {
+        if (mode !== "manual") { joyReset(); return; }
+        if (Math.abs(joyNX) < 0.05 && Math.abs(joyNY) < 0.05) return;
+        fetch("/cmd/jog", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ d_yaw: joyNX * LIMITS.jog_step_deg,
+                                 d_pitch: joyNY * LIMITS.jog_step_deg })
+        });
+      }, 100);
+    });
+    joyKnob.addEventListener("pointermove", (ev) => {
+      if (joyTimer) joyUpdate(ev.clientX, ev.clientY);
+    });
+    joyKnob.addEventListener("pointerup", joyReset);
+    joyKnob.addEventListener("pointercancel", joyReset);
+
+    // -------- servo --------
+    async function servoCmd(action) {
+      if (mode !== "manual" && action !== "torque_off") return;
+      const body = { action };
+      if (action === "move") {
+        body.yaw_deg = parseFloat(document.getElementById("yawIn").value);
+        body.pitch_deg = parseFloat(document.getElementById("pitchIn").value);
+      }
+      await fetch("/cmd/servo", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+    }
+
+    // -------- audio --------
+    function onWaveformChange() {
+      const wf = document.getElementById("waveform").value;
+      document.getElementById("sweepFields").style.display = (wf === "sweep") ? "" : "none";
+      document.getElementById("pulseFields").style.display = (wf === "pulse") ? "" : "none";
+    }
+
+    async function audioCmd(action) {
+      if (action === "stop") {
+        await fetch("/cmd/audio", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "stop" })
+        });
+        return;
+      }
+      if (mode !== "manual") return;
+      const wf = document.getElementById("waveform").value;
+      const body = {
+        action: "play",
+        waveform: wf,
+        freq: parseFloat(document.getElementById("freqIn").value),
+        // clamp sisi klien hanya untuk UX; batas keras tetap di DACAudio
+        amplitude: Math.min(parseFloat(document.getElementById("ampIn").value),
+                            LIMITS.amplitude_max),
+        duration: Math.min(parseFloat(document.getElementById("durIn").value),
+                           LIMITS.duration_max),
+      };
+      if (wf === "sweep") {
+        body.f_start = parseFloat(document.getElementById("fStartIn").value);
+        body.f_end = parseFloat(document.getElementById("fEndIn").value);
+      } else if (wf === "pulse") {
+        body.n_cycles = parseInt(document.getElementById("nCyclesIn").value, 10);
+        body.pulse_waveform = document.getElementById("pulseWaveform").value;
+        body.inverted = document.getElementById("invertedIn").checked;
+        body.half_cycle = document.getElementById("halfCycleIn").checked;
+      }
+      await fetch("/cmd/audio", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+    }
+
+    // -------- sensor IR --------
+    const IR_VMAX = 3.3;          // rentang tampilan bar (ADS1115 @ 3.3 V)
+    const irBarsEl = document.getElementById("irBars");
+    function buildIrBars() {
+      irBarsEl.innerHTML = "";
+      // IR_REVERSE: urutan fisik sensor mirror thd kamera -> balik urutan bar
+      // supaya posisi bar cocok dengan kiri/kanan pada gauge & video
+      let ids = [];
+      for (let i = 1; i <= LIMITS.n_ir; i++) ids.push(i);
+      if (LIMITS.ir_reverse) ids.reverse();
+      for (const i of ids) {
+        const d = document.createElement("div");
+        d.className = "irbar"; d.id = "irbar" + i;
+        d.innerHTML =
+          `<div class="col">` +
+          `<div class="thresh" style="bottom:${(LIMITS.ir_threshold_v / IR_VMAX * 100).toFixed(1)}%"></div>` +
+          `<div class="fill"></div></div>` +
+          `<div class="val">S${i}<br>— V</div>`;
+        irBarsEl.appendChild(d);
+      }
+    }
+    buildIrBars();
+
+    function updateIR(msg) {
+      msg.sensors.forEach((s) => {
+        const bar = document.getElementById("irbar" + s.sensor_id);
+        if (!bar) return;
+        bar.classList.toggle("hot", s.triggered);
+        bar.querySelector(".fill").style.height =
+          Math.min(100, s.voltage / IR_VMAX * 100) + "%";
+        bar.querySelector(".val").innerHTML =
+          `S${s.sensor_id}<br>${s.voltage.toFixed(2)} V`;
+      });
+      setBadge(document.getElementById("irStatus"),
+               msg.ir_hot ? "PANAS terdeteksi" : "tidak ada panas",
+               msg.ir_hot ? "hot" : "audio-off");
+      const marker = document.getElementById("irMarker");
+      const dirEl = document.getElementById("irDir");
+      if (msg.ir_x !== null && msg.ir_x !== undefined) {
+        marker.style.display = "block";
+        marker.style.left = ((msg.ir_x + 1) / 2 * 100) + "%";
+        const arah = msg.ir_x < -0.2 ? "kiri" :
+                     msg.ir_x >  0.2 ? "kanan" : "tengah";
+        dirEl.textContent = `arah: ${arah} (${msg.ir_x.toFixed(2)})`;
+      } else {
+        marker.style.display = "none";
+        dirEl.textContent = "arah: —";
+      }
+    }
+
+    // -------- log kejadian --------
+    const logList = document.getElementById("logList");
+    function addLog(entry) {
+      const nearBottom =
+        logList.scrollHeight - logList.scrollTop - logList.clientHeight < 40;
+      const d = new Date(entry.t * 1000);
+      const hh = String(d.getHours()).padStart(2, "0");
+      const mm = String(d.getMinutes()).padStart(2, "0");
+      const ss = String(d.getSeconds()).padStart(2, "0");
+      const div = document.createElement("div");
+      div.innerHTML = `<span class="t">${hh}:${mm}:${ss}</span>`;
+      div.appendChild(document.createTextNode(entry.msg));
+      logList.appendChild(div);
+      while (logList.children.length > 200) logList.removeChild(logList.firstChild);
+      if (nearBottom) logList.scrollTop = logList.scrollHeight;
+    }
+    fetch("/logs").then(r => r.json()).then(list => list.forEach(addLog));
+
+    // -------- SSE: state / mode / deteksi / audio / servo / log --------
+    const es = new EventSource("/events");
+    es.onmessage = (ev) => {
+      const msg = JSON.parse(ev.data);
+      if (msg.type === "state") {
+        setBadge(document.getElementById("state"), msg.value, "state");
+      } else if (msg.type === "mode") {
+        applyMode(msg.value);
+      } else if (msg.type === "detection") {
+        const c = (msg.confidence * 100).toFixed(0);
+        document.getElementById("det").textContent =
+          `api conf=${c}% @ [${msg.bbox.map(v => Math.round(v)).join(", ")}]`;
+      } else if (msg.type === "ir") {
+        updateIR(msg);
+      } else if (msg.type === "audio") {
+        const el = document.getElementById("audioState");
+        if (msg.playing) {
+          setBadge(el, `PLAYING ${msg.freq} Hz ${msg.waveform}`, "audio-on");
+        } else {
+          setBadge(el, "stopped", "audio-off");
+        }
+      } else if (msg.type === "servo") {
+        document.getElementById("servoPos").textContent =
+          `yaw ${msg.yaw_deg.toFixed(1)}° / pitch ${msg.pitch_deg.toFixed(1)}°`;
+        setBadge(document.getElementById("torque"),
+                 msg.torque ? "torque ON" : "torque OFF",
+                 msg.torque ? "audio-on" : "audio-off");
+        const yawIn = document.getElementById("yawIn");
+        const pitchIn = document.getElementById("pitchIn");
+        if (document.activeElement !== yawIn) yawIn.value = msg.yaw_deg.toFixed(1);
+        if (document.activeElement !== pitchIn) pitchIn.value = msg.pitch_deg.toFixed(1);
+      } else if (msg.type === "log") {
+        addLog(msg);
+      }
+    };
+
+    // heartbeat: jaga mode MANUAL tetap hidup selama tab terbuka
+    setInterval(() => {
+      if (mode === "manual") fetch("/heartbeat", { method: "POST" });
+    }, 2000);
+
+    // ambil batas & default dari server (core/config.py = sumber kebenaran)
+    fetch("/config").then(r => r.json()).then(c => {
+      LIMITS = Object.assign(LIMITS, c);
+      document.getElementById("ampMax").textContent = LIMITS.amplitude_max;
+      document.getElementById("durMax").textContent = LIMITS.duration_max;
+      const amp = document.getElementById("ampIn");
+      amp.max = LIMITS.amplitude_max;
+      amp.value = Math.min(parseFloat(amp.value), LIMITS.amplitude_max);
+      document.getElementById("durIn").max = LIMITS.duration_max;
+      document.getElementById("freqIn").value = LIMITS.freq_default;
+      const y = document.getElementById("yawIn"), p = document.getElementById("pitchIn");
+      y.min = LIMITS.yaw_min;   y.max = LIMITS.yaw_max;
+      p.min = LIMITS.pitch_min; p.max = LIMITS.pitch_max;
+      buildIrBars();
+    }).catch(() => {});
+
+    setManualEnabled(false);   // mulai di AUTO: kontrol manual nonaktif
+  </script>
+</body>
+</html>

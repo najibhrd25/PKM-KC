@@ -14,7 +14,7 @@ Setup Software (Raspberry Pi):
 Setup Hardware:
     - GPIO14 (TXD) -> DI modul UART-RS485 (auto direction)
     - GPIO15 (RXD) -> RO modul UART-RS485 (auto direction)
-    - A/B RS485 -> bus Dynamixel (semua servo paralel, ID 1-4)
+    - A/B RS485 -> bus Dynamixel (2 servo turret: yaw ID 1, pitch ID 2)
     - MX-106 disuplai 12V terpisah (jangan dari 5V Raspberry Pi)
 
 Referensi:
@@ -37,7 +37,7 @@ PROTOCOL_VERSION = 1.0
 # Pi 5: /dev/serial0 -> ttyAMA10 (UART Bluetooth, bukan GPIO14/15).
 # Dengan dtparam=uart0=on, GPIO14/15 muncul sebagai /dev/ttyAMA0.
 DEVICENAME = "/dev/ttyAMA0"
-BAUDRATE = 1000000
+BAUDRATE = 57600  # terverifikasi via ping saat pengujian (MX-106 default)
 
 # Control table address (Protocol 1.0 - MX-106)
 ADDR_CW_ANGLE_LIMIT = 6
@@ -47,16 +47,9 @@ ADDR_MOVING_SPEED = 32
 ADDR_GOAL_POSITION = 30
 ADDR_PRESENT_POSITION = 36
 
-# ID servo per axis
-ID_X = 1
-ID_Y = 2
-ID_Z1 = 3
-ID_Z2 = 4
-ALL_IDS = (ID_X, ID_Y, ID_Z1, ID_Z2)
-
-# Arah putaran (wheel mode)
-CCW = 0  # maju
-CW = 1   # mundur
+# ID servo per axis (turret 2-sumbu)
+ID_X = 1  # yaw
+ID_Y = 2  # pitch
 
 TEST_SPEED = 100  # sesuai 'laju' di kode STM32
 
@@ -116,18 +109,6 @@ def set_torque(port_handler, packet_handler, dxl_id, enable):
         print(f"[ID {dxl_id}] Torque {'ON' if enable else 'OFF'}")
 
 
-def set_wheel_mode(port_handler, packet_handler, dxl_id):
-    """Set CW & CCW angle limit ke 0 -> wheel mode (rotasi kontinu)."""
-    packet_handler.write2ByteTxRx(port_handler, dxl_id, ADDR_CW_ANGLE_LIMIT, 0)
-    result, error = packet_handler.write2ByteTxRx(port_handler, dxl_id, ADDR_CCW_ANGLE_LIMIT, 0)
-    if result != COMM_SUCCESS:
-        print(f"[ID {dxl_id}] Gagal set wheel mode: {packet_handler.getTxRxResult(result)}")
-    elif error != 0:
-        print(f"[ID {dxl_id}] Error set wheel mode: {packet_handler.getRxPacketError(error)}")
-    else:
-        print(f"[ID {dxl_id}] Wheel mode aktif")
-
-
 def set_joint_mode(port_handler, packet_handler, dxl_id, cw_limit=POSITION_MIN, ccw_limit=POSITION_MAX):
     """Set CW & CCW angle limit ke rentang non-zero -> joint mode (kontrol posisi/sudut)."""
     packet_handler.write2ByteTxRx(port_handler, dxl_id, ADDR_CW_ANGLE_LIMIT, cw_limit)
@@ -138,48 +119,6 @@ def set_joint_mode(port_handler, packet_handler, dxl_id, cw_limit=POSITION_MIN, 
         print(f"[ID {dxl_id}] Error set joint mode: {packet_handler.getRxPacketError(error)}")
     else:
         print(f"[ID {dxl_id}] Joint mode aktif")
-
-
-# ======================= FUNGSI GERAK =======================
-def _speed_value(direction, speed):
-    """Hitung nilai Moving Speed: 0-1023 = CCW, 1024-2047 = CW."""
-    return speed if direction == CCW else 1024 + speed
-
-
-def move_axis(port_handler, packet_handler, dxl_id, direction, speed):
-    """Gerakkan 1 servo (axis X atau Y) dengan arah & kecepatan tertentu."""
-    value = _speed_value(direction, speed)
-    result, error = packet_handler.write2ByteTxRx(port_handler, dxl_id, ADDR_MOVING_SPEED, value)
-    if result != COMM_SUCCESS:
-        print(f"[ID {dxl_id}] Gagal gerak: {packet_handler.getTxRxResult(result)}")
-    elif error != 0:
-        print(f"[ID {dxl_id}] Error gerak: {packet_handler.getRxPacketError(error)}")
-
-
-def move_axis_z(port_handler, packet_handler, direction, speed):
-    """Gerakkan axis Z (servo ID_Z1 & ID_Z2 sekaligus via sync write)."""
-    value = _speed_value(direction, speed)
-    param = [DXL_LOBYTE(value), DXL_HIBYTE(value)]
-
-    group_sync_write = GroupSyncWrite(port_handler, packet_handler, ADDR_MOVING_SPEED, 2)
-    group_sync_write.addParam(ID_Z1, param)
-    group_sync_write.addParam(ID_Z2, param)
-
-    result = group_sync_write.txPacket()
-    if result != COMM_SUCCESS:
-        print(f"[ID {ID_Z1},{ID_Z2}] Gagal gerak axis Z: {packet_handler.getTxRxResult(result)}")
-
-    group_sync_write.clearParam()
-
-
-def stop_axis(port_handler, packet_handler, dxl_id):
-    """Hentikan 1 servo (axis X/Y)."""
-    move_axis(port_handler, packet_handler, dxl_id, CCW, 0)
-
-
-def stop_axis_z(port_handler, packet_handler):
-    """Hentikan axis Z (servo ID_Z1 & ID_Z2)."""
-    move_axis_z(port_handler, packet_handler, CCW, 0)
 
 
 # ======================= FUNGSI GERAK (JOINT MODE / SUDUT) =======================

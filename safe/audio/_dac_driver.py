@@ -29,7 +29,7 @@ import sounddevice as sd
 
 # ======================= KONFIGURASI =======================
 SAMPLE_RATE = 44100  # Hz
-AMPLITUDE = 0.5      # skala 0.0 - 1.0
+AMPLITUDE = 0.3      # skala 0.0 - 1.0
 DEVICE = 0           # index dari list_devices() - 0 = snd_rpi_hifiberry_dac
 
 
@@ -134,40 +134,6 @@ def play(signal, sample_rate=SAMPLE_RATE, label=""):
         print(f"-> Memainkan: {label}")
     sd.play(signal, sample_rate, device=DEVICE)
     sd.wait()
-
-
-# ======================= TEST PROGRAM (tidak dipakai) =======================
-# if __name__ == "__main__":
-#     list_devices()
-#
-#     print("=== Test dasar: tone 440 Hz ===")
-#     play(generate_sine(440, 1.0), label="Sine 440 Hz (1s)")
-#     time.sleep(0.5)
-#
-#     print("\n=== Test bentuk gelombang @ 440 Hz ===")
-#     play(generate_square(440, 1.0), label="Square 440 Hz (1s)")
-#     time.sleep(0.5)
-#     play(generate_sawtooth(440, 1.0), label="Sawtooth 440 Hz (1s)")
-#     time.sleep(0.5)
-#     play(generate_triangle(440, 1.0), label="Triangle 440 Hz (1s)")
-#     time.sleep(0.5)
-#
-#     print("\n=== Test white noise ===")
-#     play(generate_white_noise(1.0), label="White noise (1s)")
-#     time.sleep(0.5)
-#
-#     print("\n=== Test frequency sweep ===")
-#     play(generate_sweep(20, 1000, 3.0), label="Sweep 20 Hz - 1000 Hz (3s)")
-#     time.sleep(0.5)
-#
-#     print("\n=== Test rentang frekuensi akustik fire extinguisher (30-60 Hz) ===")
-#     for freq in (30, 45, 60):
-#         play(generate_sine(freq, 2.0), label=f"Sine {freq} Hz (2s)")
-#         time.sleep(0.5)
-#         play(generate_square(freq, 2.0), label=f"Square {freq} Hz (2s)")
-#         time.sleep(0.5)
-#
-#     print("\nSelesai. Semua test sinyal sudah dimainkan.")
 
 
 # ======================= KONTROL INTERAKTIF PULSA VORTEX RING =======================

@@ -18,20 +18,19 @@ internal. Jalur kritis (servo loop, audio) tetap di dalam Event Bus.
 
 ## Status Implementasi
 
-Penting dibaca dulu — sebagian fitur masih rencana, bukan kode aktif:
+Seluruh lapisan sudah terintegrasi dan aktif (lihat `DOKUMENTASI_SISTEM.md`
+untuk gambaran sistem penuh):
 
 | Fitur | Status | Catatan |
 |---|---|---|
 | Event Bus + semua event internal | ✅ **Jalan** | `safe/core/`, `safe/orchestrator.py`, adapter |
-| Kontrol servo internal (`servo_cmd`) | ✅ **Jalan** | `ServoActuator` sudah subscribe |
-| Audio, tracking, fusi sensor IR | ✅ **Jalan** | Pipeline inti tahap 1–5 |
-| WebBridge HTTP API (`/stream`, `/events`, `/cmd/*`) | 🔶 **Rencana** | Spesifikasi di `Reference/WebBridgeReference.py`; folder `safe/web/` belum dibuat |
-| Kontrol servo eksternal (`/cmd/jog`) | 🔶 **Rencana** | Butuh WebBridge **dan** handler `_on_jog` di `ServoActuator` (lihat B.3) |
-| Stream kamera (`/stream`) | 🔶 **Rencana** | Butuh `YOLODetector` mem-publish `frame_update` (masih placeholder) |
-
-> 🔶 = kontraknya sudah ditetapkan dan stabil, jadi Anda boleh menulis klien
-> sekarang. Begitu lapis eksternal diaktifkan (lihat [prasyarat B](#prasyarat-aktivasi)),
-> klien langsung berfungsi tanpa perubahan.
+| Kontrol servo internal (`servo_cmd`) | ✅ **Jalan** | `ServoActuator` (GroupSyncWrite + rate-limit) |
+| Audio, tracking, fusi sensor IR | ✅ **Jalan** | Pipeline inti + fusi kaya (arah IR & kesepakatan) |
+| Deteksi kamera (`YOLODetector`) | ✅ **Jalan** | Picamera2 + YOLO NCNN; publish `fire_detected`/`fire_cleared` |
+| Scanning otomatis saat IDLE | ✅ **Jalan** | `tracking/scanner.py` (raster zig-zag) |
+| WebBridge HTTP API (`/stream`, `/events`, `/cmd/*`) | ✅ **Jalan** | `safe/web/web_bridge.py` + `static/index.html`; aktif via `use_web=True` |
+| Kontrol servo eksternal (`/cmd/jog`) | ✅ **Jalan** | Handler `_on_jog` di `ServoActuator` (state sudut dibagi dgn `servo_cmd`) |
+| Stream kamera (`/stream`) | ✅ **Jalan** | `YOLODetector` mem-publish `frame_update` (JPEG beranotasi) |
 
 ---
 
@@ -74,10 +73,10 @@ Sumber kebenaran: [safe/core/events.py](core/events.py).
 | `TRACK_START` | Orch → Tracking | `{bbox, frame_w, frame_h}` |
 | `TRACK_STOP` | Orch → Tracking | `{}` |
 | `SERVO_CMD` | Tracking → Servo | `{yaw_deg: float, pitch_deg: float}` |
-| `SERVO_HOME` | Orch → Servo | `{}` |
-| `SERVO_STOP` | Orch → Servo | `{}` |
-| `AUDIO_CMD` | Orch → DAC | `{freq: float, amplitude: float, duration: float}` |
-| `AUDIO_STOP` | Orch → DAC | `{}` |
+| `SERVO_HOME` | Orch/WebBridge → Servo | `{}` |
+| `SERVO_STOP` | Orch/WebBridge → Servo | `{}` (torque off) |
+| `AUDIO_CMD` | Orch/WebBridge → DAC | `{freq, amplitude, duration, waveform?, f_start?, f_end?, n_cycles?, pulse_waveform?, inverted?, half_cycle?}` |
+| `AUDIO_STOP` | Orch/WebBridge → DAC | `{}` |
 
 ### Status (notifikasi → siapa saja)
 | Event | Arah | Payload |
@@ -85,6 +84,8 @@ Sumber kebenaran: [safe/core/events.py](core/events.py).
 | `STATE_CHANGED` | Orch → * | `{old: str, new: str}` |
 | `TARGET_LOCKED` | Tracking → Orch | `{error_px: float}` |
 | `EXTINGUISH_DONE` | Orch → * | `{}` |
+| `AUDIO_STATE` | DAC → * | `{playing: bool, freq?, amplitude?, duration?, waveform?}` |
+| `SERVO_STATE` | Servo → * | `{yaw_deg: float, pitch_deg: float, torque: bool}` |
 
 ### Web (dipakai lapis eksternal)
 | Event | Arah | Payload |
@@ -171,8 +172,8 @@ menggerakkan servo ke sudut absolut (akan di-clamp ke batas fisik di config).
 ```python
 from core import events
 
-# yaw 0-180 (netral 90), pitch 50-140 (netral 70)
-bus.publish(events.SERVO_CMD, {"yaw_deg": 120.0, "pitch_deg": 80.0})
+# yaw & pitch 135-225 (netral 180) — turret di-center 180° ±45°
+bus.publish(events.SERVO_CMD, {"yaw_deg": 200.0, "pitch_deg": 165.0})
 ```
 
 > Catatan: di mode operasi otomatis, Tracking juga mem-publish `SERVO_CMD`. Untuk
@@ -195,19 +196,18 @@ pengontrol, atau sistem monitoring terpisah.
 
 ## Prasyarat Aktivasi
 
-Lapis ini 🔶 **belum aktif secara default**. Untuk menyalakannya:
+Modul `safe/web/` sudah dibuat (`web_bridge.py`, `__init__.py`,
+`static/index.html`). Lapis ini **tidak aktif secara default** — untuk menyalakannya:
 
-1. Buat modul `safe/web/web_bridge.py` dari `Reference/WebBridgeReference.py`
-   (+ `safe/web/__init__.py` dan `safe/web/static/index.html`).
-2. Install dependency di Pi:
+1. Install dependency di Pi:
    ```bash
    pip3 install fastapi uvicorn
    ```
-3. Aktifkan flag di [main.py](main.py):
+2. Aktifkan flag di [main.py](main.py):
    ```python
    bus, orchestrator, modules = build_system(use_fake_detector=True, use_web=True)
    ```
-4. Jalankan SAFE, lalu akses dari klien: `http://<IP_PI>:8000`
+3. Jalankan SAFE, lalu akses dari klien: `http://<IP_PI>:8000`
    (host & port dari [safe/core/config.py](core/config.py): `WEB_HOST=0.0.0.0`,
    `WEB_PORT=8000`).
 
@@ -219,15 +219,19 @@ Pada contoh di bawah, ganti `<IP_PI>` dengan IP Raspberry Pi (mis. `10.7.101.150
 |---|---|---|
 | `/` | GET | Halaman dashboard (HTML) |
 | `/stream` | GET | Live kamera (MJPEG, `multipart/x-mixed-replace`) |
-| `/events` | GET | Status real-time (SSE: state, mode, deteksi) |
+| `/events` | GET | Status real-time (SSE: state, mode, deteksi, ir, audio, servo, log) |
+| `/logs` | GET | Riwayat log kejadian (JSON, ring buffer 200 entri) |
 | `/cmd/mode` | POST | Ganti mode: `{"mode": "auto"\|"manual"}` |
-| `/cmd/jog` | POST | Gerak servo inkremental: `{"d_yaw": float, "d_pitch": float}` |
+| `/cmd/jog` | POST | Gerak servo inkremental: `{"d_yaw": float, "d_pitch": float}` — hanya mode manual (409 jika tidak) |
+| `/cmd/servo` | POST | `{"action": "home"\|"torque_off"\|"move", "yaw_deg"?, "pitch_deg"?}` — `home`/`move` hanya manual; `torque_off` selalu boleh |
+| `/cmd/audio` | POST | `{"action": "play"\|"stop", "freq", "amplitude", "duration", "waveform", ...}` — `play` hanya manual; `stop` selalu boleh |
 | `/heartbeat` | POST | Tanda UI masih aktif (cegah balik ke AUTO) |
 
 ## B.1 — Stream Kamera (`GET /stream`)
 
-Stream MJPEG. 🔶 Frame baru muncul saat `YOLODetector` aktif mem-publish
-`frame_update`; selama YOLO masih placeholder, stream menampilkan placeholder kosong.
+Stream MJPEG. Frame beranotasi muncul saat `YOLODetector` aktif mem-publish
+`frame_update` (jalankan dengan `use_fake_detector=False`); dengan FakeDetector,
+stream menampilkan placeholder kosong.
 
 **Python (OpenCV) — paling praktis untuk olah frame:**
 ```python
@@ -268,12 +272,17 @@ curl -s -I http://<IP_PI>:8000/stream
 
 ## B.2 — Status Real-time (`GET /events`)
 
-Server-Sent Events. Tiap baris `data:` berisi JSON. Tiga jenis payload:
+Server-Sent Events. Tiap baris `data:` berisi JSON. Jenis payload:
 
 ```json
 {"type": "state",     "value": "tracking"}
 {"type": "mode",      "value": "manual"}
 {"type": "detection", "bbox": [320, 240, 80, 100], "confidence": 0.91}
+{"type": "ir",        "sensors": [{"sensor_id": 1, "raw": 12345, "voltage": 1.54, "triggered": true}, ...],
+                      "ir_hot": true, "ir_x": -0.42}
+{"type": "audio",     "playing": true, "freq": 45.0, "amplitude": 0.3, "duration": 10.0, "waveform": "sine"}
+{"type": "servo",     "yaw_deg": 183.0, "pitch_deg": 178.5, "torque": true}
+{"type": "log",       "t": 1752600000.0, "msg": "Mode: MANUAL"}
 ```
 
 **Python:**
@@ -298,10 +307,10 @@ curl -N http://<IP_PI>:8000/events
 Gerak servo **inkremental** (delta derajat) dari posisi sekarang, lalu di-clamp ke
 batas fisik. Cocok untuk joystick.
 
-> ⚠️ Prasyarat: (1) mode harus **`manual`** dulu (lihat B.4) — di mode auto, jog
-> diabaikan demi keamanan; (2) 🔶 butuh handler `_on_jog` di `ServoActuator`. Pada
-> scaffold inti sekarang handler itu belum ada — tambahkan saat fase web (lihat
-> `Reference/ARCHITECTURE.md` §11.4). Tanpa itu, `/cmd/jog` terkirim tapi servo diam.
+> ✅ Handler `_on_jog` di `ServoActuator` sudah ada dan berbagi state sudut dengan
+> `servo_cmd` (jog menambah delta ke posisi terakhir, lalu di-clamp). Dashboard hanya
+> mengirim `/cmd/jog` saat mode **`manual`** (lihat B.4); di mode auto, orchestrator
+> sendiri dapat mengirim jog kecil ke arah IR (fallback ir-seek saat PRE_ALARM).
 
 **Python:**
 ```python
@@ -321,11 +330,66 @@ curl -X POST http://<IP_PI>:8000/cmd/jog \
 
 Besar langkah yang disarankan: `WEB_JOG_STEP_DEG = 3.0` (dari config).
 
+## B.3b — Kontrol Servo Lanjutan (`POST /cmd/servo`)
+
+Aksi diskret servo (selain jog inkremental):
+
+```bash
+# kembali ke posisi netral 180/180 (hanya mode manual)
+curl -X POST http://<IP_PI>:8000/cmd/servo \
+     -H "Content-Type: application/json" -d '{"action": "home"}'
+
+# posisi absolut (hanya mode manual; clamp 135-225° di ServoActuator)
+curl -X POST http://<IP_PI>:8000/cmd/servo \
+     -H "Content-Type: application/json" \
+     -d '{"action": "move", "yaw_deg": 200.0, "pitch_deg": 170.0}'
+
+# matikan torsi (boleh dari mode apa pun — mematikan selalu aman)
+curl -X POST http://<IP_PI>:8000/cmd/servo \
+     -H "Content-Type: application/json" -d '{"action": "torque_off"}'
+```
+
+Setelah `torque_off`, perintah gerak berikutnya (jog/home/move) otomatis
+menyalakan kembali torsi.
+
+## B.3c — Kontrol Audio/DAC (`POST /cmd/audio`)
+
+Memutar sinyal pemadaman secara manual. `play` hanya diterima saat mode
+`manual` (409 jika tidak); `stop` selalu boleh. Amplitudo & durasi tetap
+dipotong keras oleh `DACAudio` (`AMPLITUDE_MAX_SAFE`, `AUDIO_MAX_DURATION`)
+apa pun nilai yang dikirim.
+
+```bash
+# sine 45 Hz, 10 detik
+curl -X POST http://<IP_PI>:8000/cmd/audio \
+     -H "Content-Type: application/json" \
+     -d '{"action": "play", "freq": 45, "amplitude": 0.3, "duration": 10, "waveform": "sine"}'
+
+# sweep 30 -> 90 Hz
+curl -X POST http://<IP_PI>:8000/cmd/audio \
+     -H "Content-Type: application/json" \
+     -d '{"action": "play", "waveform": "sweep", "f_start": 30, "f_end": 90, "duration": 10, "amplitude": 0.3}'
+
+# pulsa vortex-ring (durasi = n_cycles / freq)
+curl -X POST http://<IP_PI>:8000/cmd/audio \
+     -H "Content-Type: application/json" \
+     -d '{"action": "play", "waveform": "pulse", "freq": 45, "n_cycles": 3, "pulse_waveform": "sine", "inverted": false, "half_cycle": false}'
+
+# stop
+curl -X POST http://<IP_PI>:8000/cmd/audio \
+     -H "Content-Type: application/json" -d '{"action": "stop"}'
+```
+
+Waveform yang tersedia: `sine`, `square`, `sawtooth`, `triangle`, `sweep`,
+`pulse`. Status pemutaran dipublikasikan sebagai SSE `{"type": "audio", ...}`.
+
 ## B.4 — Ganti Mode (`POST /cmd/mode`)
 
-`manual` menjeda fusi sensor & tracking otomatis (servo tidak berebut). `auto`
-mengembalikan ke siaga otomatis (`IDLE`). Demi keamanan, mode `manual` **tidak
-pernah** membunyikan audio.
+`manual` menjeda fusi sensor & tracking otomatis (servo tidak berebut) dan
+membuka kontrol per-komponen (`/cmd/jog`, `/cmd/servo`, `/cmd/audio`). `auto`
+mengembalikan ke siaga otomatis (`IDLE`). Demi keamanan, audio yang sedang
+diputar **selalu dihentikan** saat berpindah mode — baik masuk maupun keluar
+manual (termasuk saat heartbeat timeout memaksa balik ke AUTO).
 
 **Python:**
 ```python
@@ -411,23 +475,36 @@ internal (atau sebaliknya):
 |---|---|---|
 | `POST /cmd/mode` | `SET_MODE` | masuk |
 | `POST /cmd/jog` | `SERVO_JOG` | masuk |
+| `POST /cmd/servo` (`home`/`torque_off`/`move`) | `SERVO_HOME` / `SERVO_STOP` / `SERVO_CMD` | masuk |
+| `POST /cmd/audio` (`play`/`stop`) | `AUDIO_CMD` / `AUDIO_STOP` | masuk |
 | `GET /events` (`state`) | `STATE_CHANGED` | keluar |
 | `GET /events` (`mode`) | `MODE_CHANGED` | keluar |
 | `GET /events` (`detection`) | `FIRE_DETECTED` | keluar |
+| `GET /events` (`ir`) | `IR_READING` (agregat 5 sensor, throttle 0.2 s, + arah `ir_x`) | keluar |
+| `GET /events` (`audio`) | `AUDIO_STATE` | keluar |
+| `GET /events` (`servo`) | `SERVO_STATE` | keluar |
+| `GET /events` (`log`) / `GET /logs` | ring buffer WebBridge | keluar |
 | `GET /stream` | `FRAME_UPDATE` | keluar |
 
 ## Ringkasan Keamanan
 
 - **Audio dibatasi keras di kode**, bukan opsional: `AMPLITUDE_MAX_SAFE` &
   `AUDIO_MAX_DURATION` (lihat [config.py](core/config.py)). Perintah `audio_cmd`
-  yang melebihi batas otomatis dipotong oleh `DACAudio`.
-- **Cooldown wajib** setelah tiap operasi audio (state `COOLDOWN`).
-- **Mode `manual` tidak pernah menyalakan audio.** Saat masuk manual, Orchestrator
-  mengirim `AUDIO_STOP` + `TRACK_STOP`.
-- **Heartbeat = safety net**: klien manual yang hilang → sistem balik AUTO sendiri.
+  yang melebihi batas otomatis dipotong oleh `DACAudio` — termasuk yang datang
+  dari `/cmd/audio` manual (n_cycles pulsa juga di-clamp agar durasi ≤ batas).
+- **Cooldown wajib** setelah tiap operasi audio otomatis (state `COOLDOWN`).
+- **Audio manual diizinkan hanya saat mode `manual`** (endpoint `play` menolak
+  409 di mode lain), dan **`AUDIO_STOP` dijamin saat keluar manual** — baik user
+  menekan AUTO maupun watchdog heartbeat yang memaksa balik.
+- **Perintah gerak servo dari web** (`/cmd/jog`, `/cmd/servo` home/move) hanya
+  diterima saat manual; `torque_off` dan `stop` audio selalu boleh (mematikan
+  selalu aman).
+- **Heartbeat = safety net**: klien manual yang hilang → sistem balik AUTO
+  sendiri (dan audio manual ikut berhenti).
 
 ## Referensi Lanjutan
 
+- **Kontrak API web lengkap untuk integrasi UI kustom: [web/DOKUMENTASI_WEB.md](web/DOKUMENTASI_WEB.md)**
 - Desain lengkap & rasional: `Reference/ARCHITECTURE.md`
 - Implementasi referensi WebBridge: `Reference/WebBridgeReference.py`
 - Definisi event: [safe/core/events.py](core/events.py)

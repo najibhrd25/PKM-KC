@@ -24,6 +24,7 @@ from sensors.ir_sensor import IRSensorArray
 from detection.fake_detector import FakeDetector
 from detection.yolo_detector import YOLODetector
 from tracking.tracker import TrackingLogic
+from tracking.scanner import Scanner
 from actuation.servo_actuator import ServoActuator
 from audio.dac_audio import DACAudio
 
@@ -46,6 +47,7 @@ def build_system(use_fake_detector=True, use_web=False):
         IRSensorArray(bus),
         detector,
         TrackingLogic(bus),
+        Scanner(bus),
         ServoActuator(bus),
         DACAudio(bus),
     ]
@@ -62,7 +64,7 @@ def build_system(use_fake_detector=True, use_web=False):
 
 
 def main():
-    bus, orchestrator, modules = build_system(use_fake_detector=True, use_web=False)
+    bus, orchestrator, modules = build_system(use_fake_detector=False, use_web=True)
 
     bus.start()
     orchestrator.start()
