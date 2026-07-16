@@ -1,6 +1,7 @@
-/*
-!/Program
-!/Reference
-!/safe
-!/safe-dashboard
-!/.gitignore
+.DS_Store
+node_modules/
+dist/
+__pycache__/
+*.pyc
+.gemini/
+.agents/
