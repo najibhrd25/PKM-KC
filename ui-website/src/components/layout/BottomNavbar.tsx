@@ -7,7 +7,7 @@ interface BottomNavbarProps {
 
 export function BottomNavbar({ currentTab, onTabChange }: BottomNavbarProps) {
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-full liquid-glass px-8 py-2">
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded liquid-glass px-8 py-2">
       <div className="flex h-12 flex-row items-center gap-12">
         <button
           onClick={() => onTabChange('auto')}
@@ -16,7 +16,7 @@ export function BottomNavbar({ currentTab, onTabChange }: BottomNavbarProps) {
           }`}
         >
           <Shield className="h-5 w-5" />
-          <span className="font-mono text-[10px] tracking-wider">AUTO</span>
+          <span className="font-mono text-[10px] tracking-wider">OTOMATIS</span>
         </button>
 
         <button
