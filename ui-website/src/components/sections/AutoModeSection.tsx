@@ -1,7 +1,6 @@
 import { VideoPanel } from '@/components/features/VideoPanel';
-import { ActivityLog } from '@/components/features/ActivityLog';
 import { SensorCard } from '@/components/features/SensorControls';
-import { Card } from '@/components/ui/Card';
+import { ActivityLog } from '@/components/features/ActivityLog';
 import type { CameraSource } from '@/lib/cameraSource';
 import type { ActivityLogItem } from '@/data/types';
 

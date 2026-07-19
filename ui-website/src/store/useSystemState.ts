@@ -18,7 +18,7 @@ let inactivityTimer: ReturnType<typeof setTimeout> | null = null;
 let eventSource: EventSource | null = null;
 
 const HEARTBEAT_INTERVAL_MS = 2000;
-const INACTIVITY_TIMEOUT_MS = 5000;
+const INACTIVITY_TIMEOUT_MS = 10000;
 
 function clearTimers() {
   startupTimers.forEach(clearTimeout);
@@ -68,10 +68,10 @@ export const useSystemState = create<SystemStore>()((set, get) => ({
   duration: 30,
   activityLogs: [],
 
-  setWaveform: (w) => set({ waveform: w }),
-  setFrequency: (f) => set({ frequency: f }),
-  setAmplitude: (a) => set({ amplitude: a }),
-  setDuration: (d) => set({ duration: d }),
+  setWaveform: (w) => { set({ waveform: w }); get().pingActivity(); },
+  setFrequency: (f) => { set({ frequency: f }); get().pingActivity(); },
+  setAmplitude: (a) => { set({ amplitude: a }); get().pingActivity(); },
+  setDuration: (d) => { set({ duration: d }); get().pingActivity(); },
   appendLog: (log) => set((state) => ({ activityLogs: [log, ...state.activityLogs].slice(0, 50) })),
 
   pingActivity: () => {

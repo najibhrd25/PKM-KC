@@ -1,34 +1,79 @@
-import { Shield, Gamepad2 } from 'lucide-react';
+import { Shield, Gamepad2, History } from 'lucide-react';
 
 interface BottomNavbarProps {
-  currentTab: 'auto' | 'manual';
-  onTabChange: (tab: 'auto' | 'manual') => void;
+  currentTab: 'auto' | 'manual' | 'riwayat';
+  onTabChange: (tab: 'auto' | 'manual' | 'riwayat') => void;
 }
 
 export function BottomNavbar({ currentTab, onTabChange }: BottomNavbarProps) {
-  return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded liquid-glass px-8 py-2">
-      <div className="flex h-12 flex-row items-center gap-12">
-        <button
-          onClick={() => onTabChange('auto')}
-          className={`flex flex-col items-center gap-1 transition-colors ${
-            currentTab === 'auto' ? 'text-danger-soft font-bold' : 'text-muted hover:text-foreground'
-          }`}
-        >
-          <Shield className="h-5 w-5" />
-          <span className="font-mono text-[10px] tracking-wider">OTOMATIS</span>
-        </button>
+  const indicatorStyle = {
+    auto: 'left-[6px] w-[110px]',
+    manual: 'left-[125px] w-[110px]',
+    riwayat: 'left-[244px] w-[110px]',
+  }[currentTab];
 
-        <button
-          onClick={() => onTabChange('manual')}
-          className={`flex flex-col items-center gap-1 transition-colors ${
-            currentTab === 'manual' ? 'text-danger-soft font-bold' : 'text-muted hover:text-foreground'
-          }`}
-        >
-          <Gamepad2 className="h-5 w-5" />
-          <span className="font-mono text-[10px] tracking-wider">MANUAL</span>
-        </button>
+  return (
+    <>
+      <style>{`
+        .liquid-glass {
+          background: rgba(10, 10, 15, 0.75); 
+          backdrop-filter: blur(12px);
+          -webkit-backdrop-filter: blur(12px);
+          box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.08);
+          position: relative;
+        }
+
+        .liquid-glass::before {
+          content: "";
+          position: absolute;
+          inset: 0;
+          padding: 1.4px; 
+          border-radius: inherit;
+          background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 100%);
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          pointer-events: none; 
+        }
+      `}</style>
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-full liquid-glass p-1.5 w-[360px]">
+        <div className="relative flex h-11 w-full flex-row items-center justify-between">
+          {/* Animated active sliding pill */}
+          <div
+            className={`absolute top-0 bottom-0 rounded-full bg-danger/20 transition-all duration-300 ease-out ${indicatorStyle}`}
+          />
+
+          <button
+            onClick={() => onTabChange('auto')}
+            className={`z-10 flex w-[110px] flex-col items-center justify-center gap-0.5 transition-colors ${
+              currentTab === 'auto' ? 'text-danger-soft font-bold' : 'text-muted hover:text-foreground'
+            }`}
+          >
+            <Shield className="h-4.5 w-4.5" />
+            <span className="font-mono text-[9px] tracking-wider">OTOMATIS</span>
+          </button>
+
+          <button
+            onClick={() => onTabChange('manual')}
+            className={`z-10 flex w-[110px] flex-col items-center justify-center gap-0.5 transition-colors ${
+              currentTab === 'manual' ? 'text-danger-soft font-bold' : 'text-muted hover:text-foreground'
+            }`}
+          >
+            <Gamepad2 className="h-4.5 w-4.5" />
+            <span className="font-mono text-[9px] tracking-wider">MANUAL</span>
+          </button>
+
+          <button
+            onClick={() => onTabChange('riwayat')}
+            className={`z-10 flex w-[110px] flex-col items-center justify-center gap-0.5 transition-colors ${
+              currentTab === 'riwayat' ? 'text-danger-soft font-bold' : 'text-muted hover:text-foreground'
+            }`}
+          >
+            <History className="h-4.5 w-4.5" />
+            <span className="font-mono text-[9px] tracking-wider">RIWAYAT</span>
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

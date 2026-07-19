@@ -1,7 +1,9 @@
 import { VideoPanel } from '@/components/features/VideoPanel';
 import { SensorPanel } from '@/components/features/SensorPanel';
 import { JoystickControls } from '@/components/features/JoystickControls';
+import { ActivityLog } from '@/components/features/ActivityLog';
 import type { CameraSource } from '@/lib/cameraSource';
+import type { ActivityLogItem } from '@/data/types';
 
 interface ManualModeSectionProps {
   streamSource: CameraSource;
@@ -14,6 +16,10 @@ interface ManualModeSectionProps {
   setAmplitude: (a: number) => void;
   setDuration: (d: number) => void;
   onShoot: () => void;
+  activityLogs: ActivityLogItem[];
+  logsReady: boolean;
+  isExporting: boolean;
+  onExport: () => void;
 }
 
 export function ManualModeSection({
@@ -27,6 +33,10 @@ export function ManualModeSection({
   setAmplitude,
   setDuration,
   onShoot,
+  activityLogs,
+  logsReady,
+  isExporting,
+  onExport,
 }: ManualModeSectionProps) {
   return (
     <div className="flex flex-col gap-4">
@@ -63,6 +73,15 @@ export function ManualModeSection({
           onShoot={onShoot}
         />
       </div>
+
+      {/* Activity Log */}
+      <ActivityLog
+        logs={activityLogs}
+        isOff={false}
+        logsReady={logsReady}
+        isExporting={isExporting}
+        onExport={onExport}
+      />
     </div>
   );
 }
