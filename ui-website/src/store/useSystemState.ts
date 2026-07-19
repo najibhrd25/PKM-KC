@@ -1,14 +1,14 @@
 import { create } from 'zustand';
-import type { ActivityLogItem } from '@/features/mission-control/types';
+import type { ActivityLogItem } from '@/data/types';
 
 import {
   LIVE_SENSOR_SNAPSHOT,
   MANUAL_MODE_PASSWORD,
   STARTUP_TIMELINE_MS,
   initialStartupPhase,
-} from '@/core/system/constants';
-import type { StartupPhase, SystemState } from '@/core/system/types';
-import { setSafeMode, sendHeartbeat, getEventsUrl } from '@/services/safe-api/safeApi';
+} from '@/data/constants';
+import type { StartupPhase, SystemState } from '@/data/types';
+import { setSafeMode, sendHeartbeat, getEventsUrl } from '@/lib/safeApi';
 
 export type { StartupPhase, SystemState };
 

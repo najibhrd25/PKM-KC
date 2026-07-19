@@ -1,5 +1,5 @@
-import type { SystemState } from '@/core/system/types';
-import type { ActivityLogItem } from '@/features/mission-control/types';
+import type { SystemState } from '@/data/types';
+import type { ActivityLogItem } from '@/data/types';
 
 interface ActivityReportData {
   frequency: number;
@@ -80,8 +80,28 @@ function createReportHtml({
   `;
 }
 
+function isWithinLastHour(timeStr: string): boolean {
+  try {
+    const [h, m, s] = timeStr.split(':').map(Number);
+    const logDate = new Date();
+    logDate.setHours(h, m, s, 0);
+
+    const now = new Date();
+    if (logDate.getTime() > now.getTime()) {
+      logDate.setDate(logDate.getDate() - 1);
+    }
+
+    const diffMs = now.getTime() - logDate.getTime();
+    const diffMins = diffMs / 1000 / 60;
+    return diffMins <= 60;
+  } catch {
+    return true; 
+  }
+}
+
 export async function shareActivityReport(data: ActivityReportData) {
-  const html = createReportHtml(data);
+  const filteredLogs = data.logs.filter((log) => isWithinLastHour(log.time));
+  const html = createReportHtml({ ...data, logs: filteredLogs });
 
   // Open a new window and use the browser's native print dialog (supports Save as PDF)
   const printWindow = window.open('', '_blank');

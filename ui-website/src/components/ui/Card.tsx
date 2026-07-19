@@ -1,11 +1,11 @@
 import { ReactNode } from 'react';
 
-interface PanelProps {
+interface CardProps {
   children: ReactNode;
   className?: string;
 }
 
-export function Panel({ children, className = '' }: PanelProps) {
+export function Card({ children, className = '' }: CardProps) {
   return (
     <div className={`border border-border bg-surface-low ${className}`}>
       {children}

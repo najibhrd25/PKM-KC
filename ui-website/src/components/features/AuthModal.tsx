@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { AppButton } from '@/shared/components/AppButton';
+import { Button } from '@/components/ui/Button';
 
 interface AuthModalProps {
   visible: boolean;
@@ -66,8 +66,8 @@ export function AuthModal({ visible, onClose, onSubmit }: AuthModalProps) {
         />
 
         <div className="flex flex-row gap-3">
-          <AppButton className="flex-1" label="CANCEL" variant="secondary" onPress={onClose} />
-          <AppButton className="flex-1" label="AUTHORIZE" onPress={handleSubmit} />
+          <Button className="flex-1" label="CANCEL" variant="secondary" onPress={onClose} />
+          <Button className="flex-1" label="AUTHORIZE" onPress={handleSubmit} />
         </div>
       </div>
     </div>

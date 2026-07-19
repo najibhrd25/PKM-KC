@@ -1,4 +1,4 @@
-interface AppButtonProps {
+interface ButtonProps {
   label: string;
   disabled?: boolean;
   variant?: 'primary' | 'secondary';
@@ -6,13 +6,13 @@ interface AppButtonProps {
   onPress: () => void;
 }
 
-export function AppButton({
+export function Button({
   label,
   disabled = false,
   variant = 'primary',
   className = '',
   onPress,
-}: AppButtonProps) {
+}: ButtonProps) {
   return (
     <button
       type="button"

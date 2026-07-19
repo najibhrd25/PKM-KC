@@ -1,4 +1,4 @@
-import type { JoystickPosition } from '@/features/mission-control/types';
+import type { JoystickPosition } from '@/data/types';
 
 // ============================================================================
 // S.A.F.E. Raspberry Pi API Client

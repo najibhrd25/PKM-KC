@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import type { JoystickPosition } from '@/features/mission-control/types';
-import { sendServoPosition } from '@/services/safe-api/safeApi';
+import type { JoystickPosition } from '@/data/types';
+import { sendServoPosition } from '@/lib/safeApi';
 
 const MAX_RADIUS = 38;
 

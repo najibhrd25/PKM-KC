@@ -1,15 +1,15 @@
 import { Home } from 'lucide-react';
 import safeLogo from '@/assets/safe-logo.svg';
-import { StatusPill } from '@/shared/components/StatusPill';
+import { StatusPill } from '@/components/ui/StatusPill';
 
-interface MissionHeaderProps {
+interface HeaderProps {
   state: string;
   isManual: boolean;
   onPowerPress: () => void;
   onHomePress: () => void;
 }
 
-export function MissionHeader({ state, isManual, onPowerPress, onHomePress }: MissionHeaderProps) {
+export function Header({ state, isManual, onPowerPress, onHomePress }: HeaderProps) {
   const isOff = state === 'OFF_STATE';
   const isStarting = state === 'STARTUP_SEQUENCE';
 

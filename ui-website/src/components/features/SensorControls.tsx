@@ -1,11 +1,11 @@
 import { ReactNode } from 'react';
-import { Panel } from '@/shared/components/Panel';
+import { Card } from '@/components/ui/Card';
 
 export function SensorCard({ children }: { children: ReactNode }) {
   return (
-    <Panel className="flex flex-1 flex-col p-4 py-5 justify-between">
+    <Card className="flex flex-1 flex-col p-4 py-5 justify-between">
       <div className="flex flex-col gap-3 flex-1 justify-center">{children}</div>
-    </Panel>
+    </Card>
   );
 }
 

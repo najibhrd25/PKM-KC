@@ -1,7 +1,7 @@
-import type { CameraSource } from '@/services/camera/cameraSource';
-import { getCameraStreamUrl } from '@/services/safe-api/safeApi';
-import { Panel } from '@/shared/components/Panel';
-import { StatusPill } from '@/shared/components/StatusPill';
+import type { CameraSource } from '@/lib/cameraSource';
+import { getCameraStreamUrl } from '@/lib/safeApi';
+import { Card } from '@/components/ui/Card';
+import { StatusPill } from '@/components/ui/StatusPill';
 
 interface VideoPanelProps {
   isOff: boolean;
@@ -15,7 +15,7 @@ export function VideoPanel({ isOff, cameraVisible, source }: VideoPanelProps) {
   const streamUrl = source.streamUrl ?? getCameraStreamUrl();
 
   return (
-    <Panel
+    <Card
       className={`relative aspect-square overflow-hidden ${
         isOff ? 'opacity-[0.45]' : ''
       }`}
@@ -50,6 +50,6 @@ export function VideoPanel({ isOff, cameraVisible, source }: VideoPanelProps) {
           {source.kind.toUpperCase()}
         </span>
       </div>
-    </Panel>
+    </Card>
   );
 }

@@ -1,8 +1,7 @@
 import { Download } from 'lucide-react';
-import type { ActivityLogItem } from '@/features/mission-control/types';
+import type { ActivityLogItem } from '@/data/types';
 
-import { AppButton } from '@/shared/components/AppButton';
-import { Panel } from '@/shared/components/Panel';
+import { Card } from '@/components/ui/Card';
 
 interface ActivityLogProps {
   isOff: boolean;
@@ -22,7 +21,7 @@ export function ActivityLog({
   const reportDisabled = isOff || !logsReady || isExporting;
 
   return (
-    <Panel className="p-4">
+    <Card className="p-4">
       <div className="mb-4 flex flex-row items-center justify-between">
         <span className="text-lg font-black tracking-[0.5px] text-foreground">
           LOG KEJADIAN
@@ -73,6 +72,6 @@ export function ActivityLog({
           </div>
         ))
       )}
-    </Panel>
+    </Card>
   );
 }

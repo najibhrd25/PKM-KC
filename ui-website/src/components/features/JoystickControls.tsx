@@ -1,11 +1,11 @@
 import { useState } from 'react';
 
-import { AuthModal } from '@/features/mission-control/components/AuthModal';
-import { useJoystick } from '@/features/mission-control/hooks/useJoystick';
-import { AppButton } from '@/shared/components/AppButton';
-import { Panel } from '@/shared/components/Panel';
+import { AuthModal } from '@/components/features/AuthModal';
+import { useJoystick } from '@/components/features/useJoystick';
+import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
 
-interface TacticalControlsProps {
+interface JoystickControlsProps {
   isOff: boolean;
   isStarting: boolean;
   isManual: boolean;
@@ -14,14 +14,14 @@ interface TacticalControlsProps {
   onShoot: () => void;
 }
 
-export function TacticalControls({
+export function JoystickControls({
   isOff,
   isStarting,
   isManual,
   frequency,
   onAuthorize,
   onShoot,
-}: TacticalControlsProps) {
+}: JoystickControlsProps) {
   const [authVisible, setAuthVisible] = useState(false);
   const enabled = !isOff && !isStarting && isManual;
   const { position, pointerHandlers } = useJoystick(enabled);
@@ -32,7 +32,7 @@ export function TacticalControls({
   }
 
   return (
-    <Panel
+    <Card
       className={`flex min-w-0 flex-1 flex-col items-center justify-center gap-3 p-3 ${
         isOff ? 'opacity-[0.45]' : ''
       }`}
@@ -93,7 +93,7 @@ export function TacticalControls({
             {isOff ? '-- Hz' : `${frequency} Hz`}
           </span>
         </div>
-        <AppButton
+        <Button
           className="mt-3 w-full min-h-[42px]"
           disabled={isOff || isStarting}
           label={
@@ -115,6 +115,6 @@ export function TacticalControls({
         onClose={() => setAuthVisible(false)}
         onSubmit={onAuthorize}
       />
-    </Panel>
+    </Card>
   );
 }

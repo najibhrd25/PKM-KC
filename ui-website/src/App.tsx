@@ -1,4 +1,4 @@
-import { MissionControlScreen } from '@/features/mission-control/screens/MissionControlScreen';
+import { MissionControlScreen } from '@/components/sections/MissionControlScreen';
 
 export function App() {
   return <MissionControlScreen />;
