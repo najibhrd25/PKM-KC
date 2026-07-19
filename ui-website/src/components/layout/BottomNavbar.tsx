@@ -7,8 +7,8 @@ interface BottomNavbarProps {
 
 export function BottomNavbar({ currentTab, onTabChange }: BottomNavbarProps) {
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-surface/90 pb-safe-bottom backdrop-blur-md">
-      <div className="flex h-16 w-full flex-row items-center justify-around px-6">
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-full liquid-glass px-8 py-2">
+      <div className="flex h-12 flex-row items-center gap-12">
         <button
           onClick={() => onTabChange('auto')}
           className={`flex flex-col items-center gap-1 transition-colors ${
@@ -16,7 +16,7 @@ export function BottomNavbar({ currentTab, onTabChange }: BottomNavbarProps) {
           }`}
         >
           <Shield className="h-5 w-5" />
-          <span className="font-mono text-[10px] tracking-wider">AUTO MODE</span>
+          <span className="font-mono text-[10px] tracking-wider">AUTO</span>
         </button>
 
         <button
@@ -26,7 +26,7 @@ export function BottomNavbar({ currentTab, onTabChange }: BottomNavbarProps) {
           }`}
         >
           <Gamepad2 className="h-5 w-5" />
-          <span className="font-mono text-[10px] tracking-wider">MANUAL MODE</span>
+          <span className="font-mono text-[10px] tracking-wider">MANUAL</span>
         </button>
       </div>
     </div>
