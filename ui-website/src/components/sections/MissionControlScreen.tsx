@@ -12,7 +12,7 @@ import { useSystemState } from '@/store/useSystemState';
 
 export function MissionControlScreen() {
   const [isExporting, setIsExporting] = useState(false);
-  const [activeTab, setActiveTab] = useState<'auto' | 'manual' | 'riwayat'>('auto');
+  const [activeTab, setActiveTab] = useState<'auto' | 'manual' | 'analisis'>('auto');
 
   const {
     waveform,
@@ -65,7 +65,7 @@ export function MissionControlScreen() {
     triggerAcousticPulse({ action: 'shoot', waveform, frequency, amplitude, duration }).catch(() => {});
   }
 
-  function handleTabChange(tab: 'auto' | 'manual' | 'riwayat') {
+  function handleTabChange(tab: 'auto' | 'manual' | 'analisis') {
     setActiveTab(tab);
     if (tab === 'manual') {
       activateManual();
@@ -97,7 +97,7 @@ export function MissionControlScreen() {
       <div className="flex w-full flex-1 flex-col gap-4 overflow-y-auto px-4 pb-36">
         <div className="flex flex-col gap-1 pt-2">
           <span className="font-mono text-[10px] tracking-[2.4px] text-muted">
-            {activeTab === 'manual' ? 'MANUAL CONTROL ACTIVE' : activeTab === 'riwayat' ? 'SYSTEM DIAGNOSTICS' : 'ACTIVE MONITORING'}
+            {activeTab === 'manual' ? 'MANUAL CONTROL ACTIVE' : activeTab === 'analisis' ? 'SYSTEM DIAGNOSTICS' : 'ACTIVE MONITORING'}
           </span>
           <h1 className="text-[30px] font-black tracking-[-1px] text-foreground">
             MISSION CONTROL
@@ -137,7 +137,7 @@ export function MissionControlScreen() {
           />
         )}
 
-        {activeTab === 'riwayat' && (
+        {activeTab === 'analisis' && (
           <RiwayatSection
             temperature={temperature}
             activityLogsCount={activityLogs.length}

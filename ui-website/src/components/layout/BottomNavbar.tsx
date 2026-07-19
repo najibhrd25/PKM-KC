@@ -1,39 +1,16 @@
-import { Shield, Gamepad2, History } from 'lucide-react';
-import { useRef, useState, useEffect } from 'react';
+import { Shield, Gamepad2, LineChart } from 'lucide-react';
 
 interface BottomNavbarProps {
-  currentTab: 'auto' | 'manual' | 'riwayat';
-  onTabChange: (tab: 'auto' | 'manual' | 'riwayat') => void;
+  currentTab: 'auto' | 'manual' | 'analisis';
+  onTabChange: (tab: 'auto' | 'manual' | 'analisis') => void;
 }
 
 export function BottomNavbar({ currentTab, onTabChange }: BottomNavbarProps) {
-  const navbarRef = useRef<HTMLDivElement>(null);
-  const autoRef = useRef<HTMLDivElement>(null);
-  const manualRef = useRef<HTMLDivElement>(null);
-  const riwayatRef = useRef<HTMLDivElement>(null);
-
-  const [indicator, setIndicator] = useState({ left: 0, width: 0 });
-
-  useEffect(() => {
-    const refs = {
-      auto: autoRef,
-      manual: manualRef,
-      riwayat: riwayatRef,
-    };
-    const activeRef = refs[currentTab];
-
-    if (activeRef.current && navbarRef.current) {
-      const activeRect = activeRef.current.getBoundingClientRect();
-      const navbarRect = navbarRef.current.getBoundingClientRect();
-      
-      const paddingX = 16; // breathing room for the indicator pill
-      
-      setIndicator({
-        left: activeRect.left - navbarRect.left - paddingX,
-        width: activeRect.width + paddingX * 2,
-      });
-    }
-  }, [currentTab]);
+  const indicatorStyle = {
+    auto: 'left-[6px]',
+    manual: 'left-[122px]',
+    analisis: 'left-[238px]',
+  }[currentTab];
 
   return (
     <>
@@ -58,54 +35,41 @@ export function BottomNavbar({ currentTab, onTabChange }: BottomNavbarProps) {
           pointer-events: none; 
         }
       `}</style>
-      <div 
-        ref={navbarRef}
-        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-full liquid-glass p-1.5 w-[360px]"
-      >
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-full liquid-glass p-1.5 w-[360px]">
         <div className="relative flex h-11 w-full flex-row items-center justify-between">
           {/* Animated active sliding pill */}
           <div
-            className="absolute top-0 bottom-0 rounded-full bg-danger/20 transition-all duration-300 ease-out"
-            style={{
-              left: `${indicator.left}px`,
-              width: `${indicator.width}px`,
-            }}
+            className={`absolute top-0 bottom-0 w-[116px] rounded-full bg-danger/20 transition-all duration-300 ease-out ${indicatorStyle}`}
           />
 
           <button
             onClick={() => onTabChange('auto')}
-            className={`z-10 flex flex-1 h-full items-center justify-center transition-colors ${
+            className={`z-10 flex w-[116px] h-full flex-col items-center justify-center gap-0.5 transition-colors ${
               currentTab === 'auto' ? 'text-danger-soft font-bold' : 'text-muted hover:text-foreground'
             }`}
           >
-            <div ref={autoRef} className="flex flex-col items-center justify-center gap-0.5">
-              <Shield className="h-4.5 w-4.5" />
-              <span className="font-mono text-[9px] tracking-wider">OTOMATIS</span>
-            </div>
+            <Shield className="h-4.5 w-4.5" />
+            <span className="font-mono text-[9px] tracking-wider">OTOMATIS</span>
           </button>
 
           <button
             onClick={() => onTabChange('manual')}
-            className={`z-10 flex flex-1 h-full items-center justify-center transition-colors ${
+            className={`z-10 flex w-[116px] h-full flex-col items-center justify-center gap-0.5 transition-colors ${
               currentTab === 'manual' ? 'text-danger-soft font-bold' : 'text-muted hover:text-foreground'
             }`}
           >
-            <div ref={manualRef} className="flex flex-col items-center justify-center gap-0.5">
-              <Gamepad2 className="h-4.5 w-4.5" />
-              <span className="font-mono text-[9px] tracking-wider">MANUAL</span>
-            </div>
+            <Gamepad2 className="h-4.5 w-4.5" />
+            <span className="font-mono text-[9px] tracking-wider">MANUAL</span>
           </button>
 
           <button
-            onClick={() => onTabChange('riwayat')}
-            className={`z-10 flex flex-1 h-full items-center justify-center transition-colors ${
-              currentTab === 'riwayat' ? 'text-danger-soft font-bold' : 'text-muted hover:text-foreground'
+            onClick={() => onTabChange('analisis')}
+            className={`z-10 flex w-[116px] h-full flex-col items-center justify-center gap-0.5 transition-colors ${
+              currentTab === 'analisis' ? 'text-danger-soft font-bold' : 'text-muted hover:text-foreground'
             }`}
           >
-            <div ref={riwayatRef} className="flex flex-col items-center justify-center gap-0.5">
-              <History className="h-4.5 w-4.5" />
-              <span className="font-mono text-[9px] tracking-wider">RIWAYAT</span>
-            </div>
+            <LineChart className="h-4.5 w-4.5" />
+            <span className="font-mono text-[9px] tracking-wider">ANALISIS</span>
           </button>
         </div>
       </div>
