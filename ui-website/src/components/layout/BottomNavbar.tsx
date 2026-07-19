@@ -20,7 +20,6 @@ export function BottomNavbar({ currentTab, onTabChange }: BottomNavbarProps) {
           backdrop-filter: blur(12px);
           -webkit-backdrop-filter: blur(12px);
           box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.08);
-          position: relative;
         }
 
         .liquid-glass::before {
