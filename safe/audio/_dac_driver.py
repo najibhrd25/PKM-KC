@@ -120,6 +120,51 @@ def generate_pulse(freq, n_cycles=1, sample_rate=SAMPLE_RATE, amplitude=AMPLITUD
     return _apply_fade(signal.astype(np.float32), sample_rate, fade_ms=2)
 
 
+def generate_siren(f_low, f_high, duration, period=1.0, sample_rate=SAMPLE_RATE,
+                   amplitude=AMPLITUDE):
+    """Sirine: frekuensi naik-turun berulang antara f_low dan f_high.
+
+    Beda dengan generate_sweep yang sekali jalan f_start -> f_end; ini profil
+    segitiga yang berulang tiap `period` detik, jadi terdengar seperti sirine.
+
+    period - detik untuk satu siklus naik+turun penuh
+    """
+    n = int(sample_rate * duration)
+    t = np.linspace(0, duration, n, endpoint=False)
+
+    # profil frekuensi segitiga: 0 -> 1 -> 0 dalam tiap periode
+    ph = (t / max(period, 1e-6)) % 1.0
+    freq_inst = f_low + (f_high - f_low) * (1.0 - np.abs(2.0 * ph - 1.0))
+
+    # fase = integral frekuensi sesaat (bukan f*t — itu salah untuk freq berubah)
+    phase = 2 * np.pi * np.cumsum(freq_inst) / sample_rate
+    signal = amplitude * np.sin(phase)
+    return _apply_fade(signal.astype(np.float32), sample_rate)
+
+
+def generate_pulse_train(freq, duration, n_cycles=1, gap=0.2, sample_rate=SAMPLE_RATE,
+                         amplitude=AMPLITUDE, waveform="sine", inverted=False,
+                         half_cycle=False):
+    """Rentetan pulsa: satu pulsa lalu hening `gap` detik, diulang sampai `duration`.
+
+    Beda dengan generate_pulse yang hanya menghasilkan SATU letupan kontinu.
+
+    duration - total panjang sinyal (detik); jumlah pengulangan dihitung dari sini
+    gap      - jeda hening antar pulsa (detik); gap=0 -> pulsa beruntun tanpa jeda
+
+    Tiap pulsa sudah ber-fade sendiri (generate_pulse), jadi tidak ada 'klik' di
+    tiap batas pulsa.
+    """
+    pulse = generate_pulse(freq, n_cycles, sample_rate, amplitude, waveform,
+                           inverted, half_cycle)
+    silence = np.zeros(max(0, int(sample_rate * gap)), dtype=np.float32)
+    period = len(pulse) + len(silence)
+    if period == 0:
+        return pulse
+    n_rep = max(1, int(sample_rate * duration) // period)
+    return np.tile(np.concatenate([pulse, silence]), n_rep)
+
+
 # ======================= PLAYBACK =======================
 def list_devices():
     """Tampilkan daftar audio device yang tersedia (cek PCM5102A terdeteksi)."""
@@ -143,7 +188,7 @@ if __name__ == "__main__":
     freq = 30.0
     amplitude = AMPLITUDE
     n_cycles = 1
-    waveform = "sine"
+    waveform = "square"
     inverted = False
     half_cycle = False
 

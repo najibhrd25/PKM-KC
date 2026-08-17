@@ -9,7 +9,8 @@ PENTING (safety, sesuai catatan proyek):
 Payload audio_cmd:
     { freq, amplitude, duration, waveform,          # waveform opsional (default sine)
       f_start, f_end,                               # khusus waveform "sweep"
-      n_cycles, pulse_waveform, inverted, half_cycle }  # khusus waveform "pulse"
+      n_cycles, pulse_waveform, inverted, half_cycle,   # "pulse" & "pulse_train"
+      gap }                                             # khusus "pulse_train"
 
 Setiap play/stop mem-publish audio_state {playing, ...} untuk dashboard.
 
@@ -57,6 +58,18 @@ class DACAudio(BaseAudio):
     def stop(self):
         self._on_stop({})
 
+    @staticmethod
+    def _pulse_shape(data):
+        """Bentuk di dalam pulsa. generate_pulse hanya kenal sine & square —
+        nilai lain akan diam-diam jadi sine, jadi peringatkan di sini."""
+        shape = str(data.get("pulse_waveform", config.PULSE_WAVEFORM)).lower()
+        if shape not in config.VALID_PULSE_WAVEFORMS:
+            logger.warning("pulse_waveform '%s' tak berlaku di mode pulsa "
+                           "(hanya %s) — fallback sine.",
+                           shape, "/".join(config.VALID_PULSE_WAVEFORMS))
+            shape = "sine"
+        return shape
+
     def _publish_state(self, playing, **info):
         self._bus.publish(events.AUDIO_STATE, {"playing": playing, **info})
 
@@ -78,12 +91,19 @@ class DACAudio(BaseAudio):
                   config.AMPLITUDE_MAX_SAFE)               # hard limit
         dur = min(float(data.get("duration", config.AUDIO_MAX_DURATION)),
                   config.AUDIO_MAX_DURATION)               # hard limit
-        waveform = str(data.get("waveform", "sine")).lower()
+        waveform = str(data.get("waveform", "square")).lower()
 
         if waveform == "sweep":
             f_start = float(data.get("f_start", freq))
             f_end = float(data.get("f_end", freq * 2))
             signal = drv.generate_sweep(f_start, f_end, dur, amplitude=amp)
+        elif waveform == "siren":
+            signal = drv.generate_siren(
+                float(data.get("f_low", config.ALARM_FREQ_LOW)),
+                float(data.get("f_high", config.ALARM_FREQ_HIGH)),
+                dur,
+                period=float(data.get("sweep_period", config.ALARM_SWEEP_PERIOD)),
+                amplitude=amp)
         elif waveform == "pulse":
             # pulse menentukan durasinya sendiri (= n_cycles/freq);
             # clamp n_cycles agar tetap <= AUDIO_MAX_DURATION
@@ -91,7 +111,20 @@ class DACAudio(BaseAudio):
             n_cycles = max(1, min(int(data.get("n_cycles", 1)), n_max))
             signal = drv.generate_pulse(
                 freq, n_cycles, amplitude=amp,
-                waveform=str(data.get("pulse_waveform", "sine")),
+                waveform=self._pulse_shape(data),
+                inverted=bool(data.get("inverted", False)),
+                half_cycle=bool(data.get("half_cycle", False)))
+        elif waveform == "pulse_train":
+            # rentetan pulsa selama `dur` (sudah di-clamp ke AUDIO_MAX_DURATION),
+            # tiap pulsa dipisah hening `gap`
+            n_max = max(1, int(freq * config.AUDIO_MAX_DURATION))
+            n_cycles = max(1, min(int(data.get("n_cycles", config.PULSE_N_CYCLES)),
+                                  n_max))
+            gap = max(0.0, min(float(data.get("gap", config.PULSE_GAP_SEC)),
+                               config.AUDIO_MAX_DURATION))
+            signal = drv.generate_pulse_train(
+                freq, dur, n_cycles=n_cycles, gap=gap, amplitude=amp,
+                waveform=self._pulse_shape(data),
                 inverted=bool(data.get("inverted", False)),
                 half_cycle=bool(data.get("half_cycle", False)))
         else:

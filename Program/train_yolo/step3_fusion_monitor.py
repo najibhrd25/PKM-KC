@@ -43,7 +43,7 @@ import camera_tracker as ct
 
 # --- Reuse driver IR dari Program/Testing/IR.py ---
 _IR_DIR = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "..", "Program", "Testing"
+    os.path.dirname(os.path.abspath(__file__)), "..", "Testing"
 )
 sys.path.insert(0, os.path.abspath(_IR_DIR))
 import IR  # noqa: E402  (import setelah sys.path disisipkan)

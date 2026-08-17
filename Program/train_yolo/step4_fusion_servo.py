@@ -36,7 +36,7 @@ import step3_fusion_monitor as fusion   # fuse(), get_latest_ir(), ir_poll_loop(
 
 # --- Reuse driver servo dari Program/Testing/Servo.py ---
 _SERVO_DIR = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "..", "Program", "Testing"
+    os.path.dirname(os.path.abspath(__file__)), "..", "Testing"
 )
 sys.path.insert(0, os.path.abspath(_SERVO_DIR))
 import Servo as servo  # noqa: E402

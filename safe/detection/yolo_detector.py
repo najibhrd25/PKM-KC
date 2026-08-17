@@ -140,10 +140,19 @@ class YOLODetector(BaseDetector):
     def _draw(self, frame, boxes):
         """Overlay ringan: crosshair + kotak (target merah, lain hijau)."""
         import cv2
+        from tracking.tracker import aim_point
         fh, fw = frame.shape[:2]
-        cx0, cy0 = fw // 2, fh // 2
+
+        # crosshair di TITIK BIDIK (pusat + AIM_OFFSET), bukan selalu pusat frame
+        ax, ay = aim_point(fw, fh)
+        cx0, cy0 = int(ax), int(ay)
         cv2.line(frame, (cx0 - 15, cy0), (cx0 + 15, cy0), (255, 255, 255), 1)
         cv2.line(frame, (cx0, cy0 - 15), (cx0, cy0 + 15), (255, 255, 255), 1)
+
+        # bila digeser, tandai pusat frame samar-samar sebagai acuan kalibrasi
+        if (cx0, cy0) != (fw // 2, fh // 2):
+            cv2.drawMarker(frame, (fw // 2, fh // 2), (120, 120, 120),
+                           cv2.MARKER_TILTED_CROSS, 10, 1)
 
         target = self._pick_target(boxes)
         for box in boxes:

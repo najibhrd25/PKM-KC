@@ -14,4 +14,5 @@ class State(Enum):
     EXTINGUISHING = "extinguishing"  # servo terkunci + audio menyala
     EVALUATING    = "evaluating"     # cek apakah api sudah padam
     COOLDOWN      = "cooldown"       # jeda wajib setelah operasi audio
+    ALARM         = "alarm"          # semua frekuensi gagal; turret netral + sirine
     MANUAL        = "manual"         # kontrol joystick dari web; fusi sensor dijeda

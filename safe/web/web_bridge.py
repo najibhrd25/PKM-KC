@@ -261,7 +261,8 @@ class WebBridge(BaseModule):
                 return _reject_not_manual()
             # clamp amplitudo/durasi tetap di DACAudio (single source of truth)
             keys = ("freq", "amplitude", "duration", "waveform", "f_start",
-                    "f_end", "n_cycles", "pulse_waveform", "inverted",
+                    "f_end", "f_low", "f_high", "sweep_period",
+                    "n_cycles", "gap", "pulse_waveform", "inverted",
                     "half_cycle")
             self._bus.publish(events.AUDIO_CMD,
                               {k: body[k] for k in keys if k in body})
@@ -308,6 +309,7 @@ class WebBridge(BaseModule):
                 "ir_threshold_v": config.IR_THRESHOLD_V,
                 "n_ir":           config.N_IR,
                 "ir_reverse":     config.IR_REVERSE,
+                "detect_mode":    config.DETECT_MODE,   # read-only; ganti = restart
             })
 
         @app.post("/heartbeat")

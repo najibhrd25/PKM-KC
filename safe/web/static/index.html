@@ -139,6 +139,8 @@
           <span id="state" class="badge state">—</span></div>
         <div class="row" style="margin-top:10px"><span class="muted">Mode</span>
           <span id="mode" class="badge mode-auto">auto</span></div>
+        <div class="row" style="margin-top:10px"><span class="muted">Logika deteksi</span>
+          <span id="detectMode" class="badge" title="Diatur saat startup (core/config.py). Ganti = restart.">—</span></div>
         <div class="row" style="margin-top:10px"><span class="muted">Deteksi</span>
           <span id="det" class="muted">tidak ada</span></div>
       </div>
@@ -478,6 +480,9 @@
       const y = document.getElementById("yawIn"), p = document.getElementById("pitchIn");
       y.min = LIMITS.yaw_min;   y.max = LIMITS.yaw_max;
       p.min = LIMITS.pitch_min; p.max = LIMITS.pitch_max;
+      const DETECT_LABEL = { fusion: "IR + kamera", camera: "kamera saja", ir: "IR saja" };
+      document.getElementById("detectMode").textContent =
+        DETECT_LABEL[LIMITS.detect_mode] || LIMITS.detect_mode || "—";
       buildIrBars();
     }).catch(() => {});
 

@@ -73,21 +73,30 @@ def pick_target(boxes):
     return max(boxes, key=lambda b: b[4])
 
 
-def compute_position(box, frame_w, frame_h):
-    """Ukur posisi box relatif terhadap titik tengah frame.
+def compute_position(box, frame_w, frame_h, aim_x_frac=0.5, aim_y_frac=0.5):
+    """Ukur posisi box relatif terhadap TITIK ACUAN pada frame.
 
     Rumus identik dengan TrackingLogic._on_detection di
     safe/tracking/tracker.py, supaya konsisten saat nanti diintegrasikan.
     Bedanya di sini yaw/pitch adalah estimasi sesaat dari posisi netral,
     bukan akumulasi (tidak ada state servo fisik di script ini).
+
+    aim_x_frac / aim_y_frac : posisi titik acuan sebagai fraksi frame
+        (0..1). 0.5/0.5 = pusat frame (default, perilaku lama). Geser mis.
+        aim_y_frac=0.65 agar target "diparkir" di bawah tengah — berguna
+        bila nosel berada di bawah sumbu kamera (koreksi offset kamera↔nosel).
     """
     x1, y1, x2, y2, conf, cls_name = box
     cx = (x1 + x2) / 2
     cy = (y1 + y2) / 2
 
-    dx = cx - frame_w / 2
-    dy = cy - frame_h / 2
+    aim_x = frame_w * aim_x_frac
+    aim_y = frame_h * aim_y_frac
 
+    dx = cx - aim_x
+    dy = cy - aim_y
+
+    # normalisasi tetap terhadap setengah frame supaya arti gain tak berubah
     err_x = dx / (frame_w / 2)
     err_y = dy / (frame_h / 2)
 
@@ -98,6 +107,7 @@ def compute_position(box, frame_w, frame_h):
 
     return {
         'cx': cx, 'cy': cy,
+        'aim_x': aim_x, 'aim_y': aim_y,
         'dx': dx, 'dy': dy,
         'err_x': err_x, 'err_y': err_y,
         'err_px': err_px,
@@ -110,9 +120,12 @@ def compute_position(box, frame_w, frame_h):
 
 def draw_tracking_overlay(frame, boxes, target_box, position):
     fh, fw = frame.shape[:2]
-    center = (fw // 2, fh // 2)
+    # crosshair di TITIK ACUAN (dari position bila ada, else pusat frame)
+    if position is not None and 'aim_x' in position:
+        center = (int(position['aim_x']), int(position['aim_y']))
+    else:
+        center = (fw // 2, fh // 2)
 
-    # crosshair di titik tengah frame
     cv2.line(frame, (center[0] - 15, center[1]), (center[0] + 15, center[1]), (255, 255, 255), 1)
     cv2.line(frame, (center[0], center[1] - 15), (center[0], center[1] + 15), (255, 255, 255), 1)
 

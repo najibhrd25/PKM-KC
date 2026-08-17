@@ -183,6 +183,43 @@ print(states)
 # Harapan: ['pre_alarm','tracking','extinguishing','evaluating','cooldown','idle']
 ```
 
+### 2b-bis. Unit test per `DETECT_MODE`
+Sama seperti 2b tapi `Orchestrator(bus, detect_mode=...)`. Hanya butuh `core/` +
+`orchestrator.py`, jadi jalan di mesin mana pun.
+
+```python
+def sweep(bus, raws):                       # satu sapuan penuh 5 kanal
+    for i, r in enumerate(raws, 1):
+        bus.publish(events.IR_READING, {"sensor_id": i, "raw": r,
+                    "voltage": r/1000, "triggered": False})
+    time.sleep(0.12)
+
+HOT_LEFT   = [3000, 10, 11, 10, 13]         # ir_x = -1.0
+HOT_CENTER = [10, 12, 3000, 10, 13]         # ir_x =  0.0
+COLD       = [10, 12, 11, 10, 13]
+```
+
+| Mode | Aksi | Harapan `states` |
+|---|---|---|
+| `camera` | sapuan `HOT_LEFT` saja | `[]` — IR diabaikan, tak ada `servo_jog` |
+| `camera` | `fire_detected` conf `0.5` | `[]` — di bawah `YOLO_CONF_THRESHOLD` |
+| `camera` | `fire_detected` conf `0.9` | `['tracking']` — **langsung**, tanpa `pre_alarm` |
+| `ir` | `fire_detected` conf `0.99` | `[]` — kamera diabaikan |
+| `ir` | sapuan `HOT_LEFT` | `['tracking']`; `track_start` **tidak** terbit |
+| `ir` | sapuan `HOT_LEFT` kedua | `servo_jog` `d_yaw < 0`, `d_pitch == 0`, state tetap `tracking` |
+| `ir` | ≥3 sapuan `HOT_CENTER` | `[...,'extinguishing']` + `audio_cmd` |
+| `ir` | sapuan `COLD` saat tracking | `[...,'idle']` |
+| `ir` | `COLD` selama pemadaman | `['tracking','extinguishing','evaluating','cooldown','idle']` |
+| `fusion` | seperti 2b | tidak berubah dari sebelumnya (regresi) |
+| `"kamera"` (typo) | konstruksi Orchestrator | `WARNING ... tidak dikenal -> pakai 'fusion'` |
+
+Dua hal yang mudah salah dan wajib ikut dicek:
+- **Tidak ada state berkedip** di mode `ir` saat titik panas berpindah sensor.
+  Kalau muncul `idle` di tengah `tracking`, keputusan tidak lagi dibatasi ke akhir
+  sapuan (`sensor_id == N_IR`) dan `servo_home` akan merusak bidikan.
+- **`track_start` tidak boleh terbit** di mode `ir`. Kalau terbit, `TrackingLogic`
+  ikut menulis `servo_cmd` dan bentrok dengan jog IR.
+
 ### 2c. Unit test Scanner
 Set `config.SCAN_GRACE_SEC` kecil, cek Scanner mem-publish `servo_cmd` menyapu naik
 dari netral saat IDLE, dan **berhenti** saat `state_changed` ke non-IDLE.
@@ -218,12 +255,45 @@ Urutan disarankan (bertahap, satu variabel per langkah):
    log `fire_detected` mengalir; jauhkan api → `fire_cleared`.
 2. **Tracking** — biarkan servo aktif. Api nyata → turret memusat (closed-loop) →
    log `target_locked`. Jika turret **menjauh** dari target, lihat troubleshooting servo.
+
+   **Kalibrasi arah putar dulu, sebelum yang lain.** Masuk MANUAL, tekan joystick
+   kanan lalu bawah. Turret harus ikut ke kanan/bawah; kalau tidak, set
+   `YAW_INVERT`/`PITCH_INVERT = True` dan restart. Konvensi sistem: *sudut naik =
+   kanan/bawah*, dipakai kamera, IR, dan joystick sekaligus — jadi kalau
+   joystick benar, ketiganya benar. Detail: DOKUMENTASI §8b.
 3. **Fusi** — kalibrasi `IR_REVERSE` (api kiri harus `ir_x<0`); pastikan `pre_alarm`
    → `tracking` hanya saat IR panas **dan** kamera yakin.
 4. **Pemadaman** — target terkunci → `extinguishing` (`audio_cmd`). **Uji di area aman,
    amplitudo terkendali.** Setelah `AUDIO_MAX_DURATION` → `evaluating` → `cooldown`.
 5. **Scanning** — tanpa api > `SCAN_GRACE_SEC` (3 dtk) → turret menyapu raster;
    taruh api di tepi → berpindah ke `tracking`.
+
+### Uji per `DETECT_MODE` di hardware
+Ganti `DETECT_MODE` di `core/config.py` (atau argumen `build_system`), **restart**,
+dan pastikan log boot menyebut mode yang benar: `Orchestrator berjalan. Deteksi: ...`.
+
+Untuk langkah 1–2 tiap mode, set sementara `config.AMPLITUDE_MAX_SAFE = 0` supaya
+turret tetap bergerak tanpa audio menyala.
+
+- **`fusion` (regresi — lulus dulu sebelum yang lain).** Ulangi langkah 1–5 di atas.
+  Urutan state harus persis seperti sebelum ada flag ini.
+- **`camera`.** Tutup/lepas sensor IR sehingga tidak pernah panas. Tunjukkan api:
+  1. `idle -> tracking` **langsung**, tanpa `pre_alarm`.
+  2. Turret memusat seperti biasa (`TrackingLogic`), lalu `target_locked`.
+  3. Panas tanpa api (mis. solder) **tidak** memicu apa pun.
+- **`ir`.** Tutup lensa kamera dan pastikan tak ada `fire_detected` di log.
+  Dekatkan sumber panas di sisi **kiri** array:
+  1. `idle -> tracking`.
+  2. Yaw bergeser ke arah panas dengan **halus** — bukan langsung mentok ke
+     135°/225°. Kalau mentok, turunkan `IR_JOG_HZ`/`IR_TRACK_YAW_GAIN`.
+  3. Pitch **tidak boleh** berubah (array IR tidak punya info elevasi).
+  4. Badge state **tidak berkedip** ke `idle` saat titik panas berpindah sensor.
+  5. Setelah terpusat `IR_LOCK_COUNT` sapuan → `tracking -> extinguishing`.
+  6. Jauhkan sumber panas → `evaluating -> cooldown -> idle` (tanpa `fire_cleared`
+     kamera sama sekali — status padam murni dari IR).
+
+  Kalibrasi `IR_REVERSE` lebih kritis di mode ini daripada di `fusion`: kalau
+  terbalik, turret akan menjauh dari sumber panas sampai mentok batas yaw.
 
 ---
 
@@ -236,6 +306,9 @@ build_system(use_fake_detector=False, use_web=True)
 Buka `http://<ip-pi>:8000/`, lalu:
 - **Stream:** video live tampil (dengan YOLODetector; kosong bila FakeDetector).
 - **Badge state/mode:** berubah mengikuti `state_changed` via SSE.
+- **Badge "Logika deteksi":** menampilkan mode aktif dari `GET /config`
+  (`IR + kamera` / `kamera saja` / `IR saja`). Read-only — ganti mode = restart.
+  Stream video dan bar IR harus tetap hidup di **semua** mode.
 - **AUTO/MANUAL:** klik MANUAL → fusi berhenti (state `manual`), tombol jog aktif.
 - **Jog:** panah menggerakkan servo (hanya di MANUAL).
 - **Heartbeat:** tutup tab saat MANUAL → dalam `WEB_HEARTBEAT_TIMEOUT` (5 dtk) sistem
@@ -251,7 +324,10 @@ Buka `http://<ip-pi>:8000/`, lalu:
 | "Gagal membuka port" | `/dev/ttyAMA0` tidak ada / dipakai | `dtparam=uart0=on` di config.txt, reboot; pastikan tak ada program lain buka port |
 | Scan tidak menemukan ID | **baud tidak cocok** (driver `1000000` vs servo `57600`), wiring A/B tertukar, torque 12V mati | samakan `BAUDRATE`; cek RxMonitor (lihat di bawah); pastikan suplai 12V |
 | TX jalan, servo diam | jalur RX (RO) putus / DI-RO tertukar | jalankan `RxMonitor.py`: byte kosong = curigai GND/RO |
-| Servo bergerak **menjauh** target | arah error terbalik | balik tanda gain, atau tukar interpretasi err_x di `TrackingLogic` |
+| Servo bergerak **menjauh** target (kamera, IR, **dan** joystick manual) | arah putar fisik servo terbalik thd konvensi sistem | `YAW_INVERT` / `PITCH_INVERT = True`. **Jangan** balik tanda `*_GAIN_DEG` atau `IR_REVERSE` — lihat DOKUMENTASI §8b |
+| Menjauh **hanya** saat tracking kamera, joystick manual benar | tanda gain kamera | balik tanda `YAW_GAIN_DEG` / `PITCH_GAIN_DEG` |
+| Menjauh **hanya** saat pengarahan IR, kamera benar | urutan sensor IR mirror thd sumbu-x kamera | `IR_REVERSE = True` |
+| Perintah yaw menggerakkan sumbu pitch (bukan terbalik, tapi **tertukar**) | `ID_X`/`ID_Y` tidak cocok dengan servo fisik | cek `python3 actuation/_servo_driver.py` → ketik `1 200`, lihat sumbu mana yang bergerak; sesuaikan `ID_X`/`ID_Y` |
 | Gerakan patah/lag saat scanning | laju kirim terlalu tinggi | turunkan `SERVO_MAX_HZ` dan/atau `SERVO_SPEED` (bukan `SCAN_YAW_DPS`) |
 | Servo mentok sebelum target | jangkauan config terlalu sempit | sesuaikan `YAW/PITCH_MIN/MAX` (default 135–225) |
 

@@ -37,15 +37,15 @@ import step3_fusion_monitor as fusion   # fuse(), get_latest_ir(), ir_poll_loop(
 
 # --- Reuse driver servo dari Program/Testing/Servo.py ---
 _SERVO_DIR = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "..", "Program", "Testing"
+    os.path.dirname(os.path.abspath(__file__)), "..", "Testing"
 )
 sys.path.insert(0, os.path.abspath(_SERVO_DIR))
 import Servo as servo  # noqa: E402
 
 
 # ======================= KONSTANTA SERVO (bisa-atur) =======================
-YAW_ID = 1
-PITCH_ID = 2
+YAW_ID = 2
+PITCH_ID = 1
 YAW_CENTER = 180.0
 PITCH_CENTER = 180.0
 
@@ -63,7 +63,7 @@ FALLBACK_YAW_GAIN = 4.0   # derajat per ir_x penuh saat fallback (IR memandu, pe
 
 DEADZONE_PX = 8.0        # error piksel di bawah ini diabaikan (anti jitter)
 LOCK_PX = 30.0          # err_px <= ini dianggap "terkunci"
-SERVO_SPEED = 100       # profil kecepatan servo (di-set SEKALI di setup)
+SERVO_SPEED = 10       # profil kecepatan servo (di-set SEKALI di setup)
 SERVO_MAX_HZ = 50.0     # batas laju kirim goal ke servo (anti-banjir bus, lepas dari FPS)
 ENABLE_SERVO = True     # False = dry-run (uji tanpa menggerakkan servo)
 FRAME_ROTATION = None   # None / cv2.ROTATE_90_CLOCKWISE / cv2.ROTATE_180 / dst.

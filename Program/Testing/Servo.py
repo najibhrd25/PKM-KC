@@ -58,14 +58,14 @@ ALL_IDS = (ID_X, ID_Y, ID_Z1, ID_Z2)
 CCW = 0  # maju
 CW = 1   # mundur
 
-TEST_SPEED = 100  # sesuai 'laju' di kode STM32
+TEST_SPEED = 10  # sesuai 'laju' di kode STM32
 
 # Resolusi posisi MX-106/MX-64 (Protocol 1.0): 0-4095 ~ 0-360 derajat
 POSITION_MIN = 0
 POSITION_MAX = 4095
 ANGLE_MAX = 360.0
 
-SCAN_ID_RANGE = range(0, 253)  # rentang ID yang di-scan saat startup
+SCAN_ID_RANGE = range(0, 2)  # rentang ID yang di-scan saat startup
 
 
 # ======================= INISIALISASI =======================

@@ -13,6 +13,7 @@ FIRE_CLEARED    = "fire_cleared"     # YOLO        -> bus (api hilang dari frame
 # ---- Event perintah dari Orchestrator (COMMAND) ----
 TRACK_START     = "track_start"      # Orchestrator -> Tracking
 TRACK_STOP      = "track_stop"       # Orchestrator -> Tracking
+SCAN_HINT       = "scan_hint"        # Orchestrator -> Scanner (arah panas IR)
 SERVO_CMD       = "servo_cmd"        # Tracking     -> Servo
 SERVO_HOME      = "servo_home"       # Orchestrator -> Servo
 SERVO_STOP      = "servo_stop"       # Orchestrator -> Servo

@@ -38,25 +38,25 @@ import camera_tracker as ct
 
 # --- Reuse driver servo dari Program/Testing/Servo.py ---
 _SERVO_DIR = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "..", "Program", "Testing"
+    os.path.dirname(os.path.abspath(__file__)), "..", "Testing"
 )
 sys.path.insert(0, os.path.abspath(_SERVO_DIR))
 import Servo as servo  # noqa: E402  (import setelah sys.path disisipkan)
 
 
 # ======================= KONSTANTA BISA-ATUR =======================
-YAW_ID = 1
-PITCH_ID = 2
+YAW_ID = 2
+PITCH_ID = 1
 
 YAW_CENTER = 180.0      # sudut init / titik tengah yaw
 PITCH_CENTER = 180.0    # sudut init / titik tengah pitch
 
 # Batas gerak per sumbu (derajat dari center), + dan - terpisah.
 # Atur sesuai ruang gerak mekanik yang aman.
-YAW_RANGE_PLUS = 45.0    # yaw boleh naik s/d YAW_CENTER + 45
-YAW_RANGE_MINUS = 45.0   # yaw boleh turun s/d YAW_CENTER - 45
-PITCH_RANGE_PLUS = 45.0
-PITCH_RANGE_MINUS = 45.0
+YAW_RANGE_PLUS = 30.0    # yaw boleh naik s/d YAW_CENTER + 30
+YAW_RANGE_MINUS = 30.0   # yaw boleh turun s/d YAW_CENTER - 30
+PITCH_RANGE_PLUS = 15.0
+PITCH_RANGE_MINUS = 15.0
 
 # Gain proporsional: berapa derajat koreksi pada error penuh (±1) per iterasi.
 YAW_GAIN_DEG = 10.0
@@ -64,8 +64,16 @@ PITCH_GAIN_DEG = 8.0
 
 # Arah koreksi (tergantung pemasangan mekanik). Kalau turret MENJAUH dari
 # target saat diuji, balik nilai yang bersangkutan ke -1.
-YAW_SIGN = +1
+YAW_SIGN = -1
 PITCH_SIGN = +1
+
+# Titik acuan bidik pada frame, sebagai fraksi (0..1). 0.5/0.5 = pusat frame.
+# Nosel berada DI BAWAH sumbu kamera -> untuk mengarahkan nosel ke api,
+# target perlu "diparkir" di bawah pusat frame. Naikkan AIM_Y_FRAC (mis.
+# 0.60-0.70) sampai semburan tepat mengenai api. AIM_X_FRAC untuk offset
+# kiri/kanan bila nosel juga bergeser horizontal.
+AIM_X_FRAC = 0.50
+AIM_Y_FRAC = 0.70
 
 DEADZONE_PX = 8.0     # error piksel di bawah ini diabaikan (anti jitter)
 LOCK_PX = 30.0        # dianggap "terkunci" kalau err_px <= ini
@@ -162,7 +170,9 @@ def control_loop(model, port, pkt):
                     last_boxes.append((x1, y1, x2, y2, conf_val, cls_name))
 
             target_box = ct.pick_target(last_boxes)
-            position = ct.compute_position(target_box, fw, fh) if target_box else None
+            position = (ct.compute_position(target_box, fw, fh,
+                                            AIM_X_FRAC, AIM_Y_FRAC)
+                        if target_box else None)
 
             # Kirim perintah servo hanya di frame deteksi (agar bus tidak dibanjiri).
             if is_detect_frame:

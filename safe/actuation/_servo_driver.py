@@ -48,17 +48,17 @@ ADDR_GOAL_POSITION = 30
 ADDR_PRESENT_POSITION = 36
 
 # ID servo per axis (turret 2-sumbu)
-ID_X = 1  # yaw
-ID_Y = 2  # pitch
+ID_X = 2  # yaw
+ID_Y = 1  # pitch
 
-TEST_SPEED = 100  # sesuai 'laju' di kode STM32
+TEST_SPEED = 10  # sesuai 'laju' di kode STM32
 
 # Resolusi posisi MX-106/MX-64 (Protocol 1.0): 0-4095 ~ 0-360 derajat
 POSITION_MIN = 0
 POSITION_MAX = 4095
 ANGLE_MAX = 360.0
 
-SCAN_ID_RANGE = range(0, 253)  # rentang ID yang di-scan saat startup
+SCAN_ID_RANGE = range(0, 2)  # rentang ID yang di-scan saat startup
 
 
 # ======================= INISIALISASI =======================

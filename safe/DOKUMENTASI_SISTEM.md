@@ -170,7 +170,43 @@ Di-port dari `fuse()` pada `Program/train_yolo/step3_fusion_monitor.py`:
 
 **Fallback ir-seek:** saat `PRE_ALARM` dan kamera belum melihat api tapi IR
 panas, orchestrator menerbitkan `servo_jog` pelan ke arah `ir_x`
-(`FALLBACK_YAW_GAIN`) agar turret memutar mencari sumber panas.
+(`FALLBACK_YAW_GAIN`) agar turret memutar mencari sumber panas. Laju jog dibatasi
+`IR_JOG_HZ` — tanpa itu `_evaluate_fusion` yang jalan ~50 Hz (5 sensor × 10 Hz)
+akan membuat turret langsung menabrak `YAW_MAX`.
+
+### 6b. Mode Deteksi (`DETECT_MODE`)
+
+Langkah 1–6 di atas **selalu dihitung** (dashboard & log butuh keduanya);
+`config.DETECT_MODE` hanya memilih sensor mana yang boleh **memutuskan**:
+
+| | `fusion` (default) | `camera` | `ir` |
+|---|---|---|---|
+| Pemicu dari `IDLE` | `ir_hot` → `PRE_ALARM` | `visual` → `TRACKING` | `ir_hot` → `TRACKING` |
+| Konfirmasi | `ir_hot ∧ visual ∧ fused ≥ FUSED_THRESHOLD` | `cam_conf ≥ YOLO_CONF_THRESHOLD` | `ir_hot` |
+| `PRE_ALARM` dipakai? | ya | tidak (dilewati) | tidak (dilewati) |
+| Sumber pengarahan | bbox kamera (`TrackingLogic`) | bbox kamera (`TrackingLogic`) | `ir_x` → `servo_jog`, yaw saja |
+| Pemicu `target_locked` | `TrackingLogic` (error piksel) | `TrackingLogic` (error piksel) | `\|ir_x\| ≤ IR_TRACK_TOL` selama `IR_LOCK_COUNT` sapuan |
+| Cek api padam | `fire_cleared` kamera | `fire_cleared` kamera | `ir_hot` jadi `False` |
+
+`PRE_ALARM` dilewati di mode satu-sensor karena artinya "menunggu konfirmasi
+sensor yang satunya" — yang tak akan datang, dan `PRE_ALARM_TIMEOUT` justru
+membatalkan operasi.
+
+Catatan implementasi mode `ir`:
+
+- **Keputusan hanya di akhir sapuan** (`sensor_id == N_IR`). Di tengah sapuan
+  sebagian kanal masih berisi nilai sapuan lama, sehingga `ir_hot` berkedip —
+  saat `TRACKING` itu berarti jatuh ke `IDLE` dan `servo_home` merusak bidikan.
+- **`TrackingLogic` tidak diaktifkan** (`track_start` tidak diterbitkan). Kamera
+  tetap jalan, jadi tanpa penjagaan ini `TrackingLogic` akan ikut menulis
+  `servo_cmd` dan bentrok dengan jog IR.
+- **Pitch tidak disentuh** — array IR horizontal tidak memberi informasi elevasi.
+- Tidak ada konfirmasi visual sebelum audio menyala; batas `AMPLITUDE_MAX_SAFE`,
+  `AUDIO_MAX_DURATION`, dan `AUDIO_COOLDOWN` tetap berlaku penuh.
+
+Semua modul (`IRSensorArray`, `YOLODetector`) tetap di-start di mode mana pun,
+jadi dashboard selalu punya video stream + bar IR. Flag hanya mengubah keputusan
+di Orchestrator. Nilai tak dikenal → `WARNING` + fallback ke `fusion`.
 
 ---
 
@@ -198,15 +234,20 @@ setelah perakitan, `[TUNING]` untuk penyetelan halus, `[SAFETY]` batas keamanan.
 |---|---|---|
 | `YAW_MIN/NEUTRAL/MAX` | 135 / 180 / 225 | jangkauan yaw [KALIBRASI] |
 | `PITCH_MIN/NEUTRAL/MAX` | 135 / 180 / 225 | jangkauan pitch [KALIBRASI] |
+| `YAW_INVERT` / `PITCH_INVERT` | True / False | arah putar fisik [KALIBRASI] — lihat §8b |
 | `YAW_GAIN_DEG` / `PITCH_GAIN_DEG` | 25 / 20 | gain proporsional [TUNING] |
 | `TARGET_LOCK_PX` | 30 | ambang "terkunci" [TUNING] |
 | `SERVO_SPEED` | 100 | profil kecepatan internal |
 | `SERVO_MAX_HZ` | 50 | batas laju kirim goal (anti bus-flood) |
 
 **IR & fusi:** `IR_THRESHOLD_V=1.5` [KAL], `IR_READ_INTERVAL=0.2`, `N_IR=5`,
-`IR_DIFF_THRESHOLD=200` [KAL], `IR_CONF_SCALE=3000`, `IR_REVERSE=True`,
+`IR_DIFF_THRESHOLD=200` [KAL], `IR_CONF_SCALE=3000`, `IR_REVERSE=False` [KAL],
 `AGREE_TOL=0.4`, `FUSED_THRESHOLD=0.6`, `DISAGREE_PENALTY=0.5`,
 `W_IR=W_CAM=0.5`, `FALLBACK_YAW_GAIN=4.0`.
+
+**Mode deteksi:** `DETECT_MODE="fusion"` (`"fusion"`/`"camera"`/`"ir"`),
+`VALID_DETECT_MODES`, `IR_TRACK_YAW_GAIN=8.0` [TUNING], `IR_TRACK_TOL=0.15`
+[TUNING], `IR_LOCK_COUNT=3` [TUNING], `IR_JOG_HZ=5.0` [TUNING]. Lihat §6b.
 
 **Deteksi/kamera:** `YOLO_CONF_THRESHOLD=0.70`, `MODEL_PATH`,
 `DETECT_CONF=0.3`, `IMG_SIZE=640`, `FRAME_SIZE=(640,480)`, `DETECT_EVERY=10`,
@@ -221,6 +262,30 @@ setelah perakitan, `[TUNING]` untuk penyetelan halus, `[SAFETY]` batas keamanan.
 
 **Web:** `WEB_HOST="0.0.0.0"`, `WEB_PORT=8000`, `WEB_HEARTBEAT_TIMEOUT=5`,
 `WEB_JOG_STEP_DEG=3`.
+
+### 8b. Arah Putar Servo (`YAW_INVERT` / `PITCH_INVERT`)
+
+Seluruh sistem memakai satu konvensi **sudut logis**: *sudut naik = turret ke
+kanan (yaw) / ke bawah (pitch)*. Ketiga sumber gerak konsisten memakainya —
+kamera (`yaw += cam_x·YAW_GAIN_DEG`), IR (`d_yaw = ir_x·gain`), dan joystick
+(`d_yaw = joyNX·jog_step`); semuanya bertanda negatif untuk target di kiri.
+
+Bila pemasangan servo membuat arah nyatanya terbalik, set `YAW_INVERT=True`.
+Sudut dicerminkan terhadap netral (`2·NEUTRAL − sudut`) **sekali** di
+`ServoActuator._send_goals`, tepat sebelum dikirim ke servo — jadi satu flag ini
+membenarkan kamera, IR, scanner, dan joystick sekaligus.
+
+Kenapa di situ, bukan di `_on_cmd`/`_on_jog`: `self._yaw`/`_pitch` yang
+di-publish sebagai `servo_state` tetap sudut logis, jadi konsisten dengan slider
+dashboard dan batas `YAW_MIN/MAX`. Arah fisik jadi murni properti pemasangan.
+
+**Jangan mengompensasi lewat jalan lain:**
+
+| Cara kompensasi | Kenapa salah |
+|---|---|
+| Balik tanda `YAW_GAIN_DEG` | hanya membetulkan jalur kamera; mode `ir` dan joystick manual tetap terbalik |
+| Balik `IR_REVERSE` | hanya jalur IR, **dan** membuat `cam_x`/`ir_x` berlawanan tanda → cek `agree` mode `fusion` selalu gagal → `DISAGREE_PENALTY` → `fused` tak pernah tembus `FUSED_THRESHOLD` |
+| Tukar `ID_X`/`ID_Y` di driver | itu untuk sumbu **tertukar**, bukan terbalik |
 
 ---
 
@@ -240,9 +305,18 @@ Pilih konfigurasi lewat `build_system()` di `main.py`:
 | `use_fake_detector=True` | FakeDetector — uji logika tanpa kamera/api |
 | `use_fake_detector=False` | YOLODetector — kamera + model NCNN (produksi) |
 | `use_web=True` | Pasang WebBridge (butuh `fastapi` + `uvicorn`) |
+| `detect_mode="fusion"` | Butuh IR **dan** kamera (default, paling aman) |
+| `detect_mode="camera"` | Hanya YOLO; IR diabaikan untuk keputusan |
+| `detect_mode="ir"` | Hanya IR; kamera diabaikan untuk keputusan |
+| `detect_mode=None` | Ikut `config.DETECT_MODE` |
 
 Contoh produksi + dashboard: `build_system(use_fake_detector=False, use_web=True)`
 lalu buka `http://<ip-pi>:8000/`.
+
+Mode deteksi hanya bisa diganti **saat startup** — ubah `DETECT_MODE` di
+`core/config.py` atau argumen `build_system()`, lalu restart. Mode yang aktif
+dicetak di log saat boot (`Orchestrator berjalan. Deteksi: ...`) dan tampil
+sebagai badge "Logika deteksi" di dashboard. Perilaku tiap mode: §6b.
 
 **Dependensi hardware:** `ultralytics`, `opencv-python`, `picamera2`
 (deteksi); `dynamixel-sdk` (servo); `adafruit-circuitpython-ads1x15` (IR);
@@ -312,12 +386,17 @@ python3 audio/_dac_driver.py        # generator pulsa vortex ring
 
 ## 13. Checklist Kalibrasi Sebelum Produksi
 
-- [ ] **Baud servo:** `_servo_driver.py` `BAUDRATE=1000000` — samakan dengan
-      konfigurasi fisik servo (Dynamixel default MX-106 = 57600).
+- [ ] **Baud servo:** `_servo_driver.py` `BAUDRATE=57600` — samakan dengan
+      konfigurasi fisik servo (= default MX-106).
 - [ ] **`MODEL_PATH`:** kini relatif `../Program/train_yolo/train-4/weights/best_ncnn_model`
       — pertimbangkan menyalin model ke dalam `safe/`.
-- [ ] **`IR_REVERSE`:** api di kiri harus menghasilkan `ir_x < 0`.
-- [ ] **Arah servo:** bila turret menjauh dari target, periksa peta yaw/pitch.
+- [ ] **`YAW_INVERT` / `PITCH_INVERT`:** di MANUAL, joystick kanan/bawah harus
+      menggerakkan turret ke kanan/bawah. **Kalibrasi ini duluan** — ia
+      mempengaruhi kamera, IR, scanner, dan joystick sekaligus (§8b).
+- [ ] **`IR_REVERSE`:** api di kiri harus menghasilkan `ir_x < 0` — sama tanda
+      dengan `cam_x`, kalau tidak cek `agree` mode `fusion` selalu gagal.
+- [ ] **`ID_X` / `ID_Y`:** pastikan cocok dengan servo fisik (yaw vs pitch);
+      docstring `_servo_driver.py` dan konstantanya sempat tidak sinkron.
 - [ ] **`YAW/PITCH_NEUTRAL` & jangkauan:** verifikasi 180° benar-benar posisi tengah mekanik.
 - [ ] **Batas audio [SAFETY]:** `AMPLITUDE_MAX_SAFE`, `AUDIO_MAX_DURATION`,
       `AUDIO_COOLDOWN` — jangan dilonggarkan tanpa alasan teknis.
