@@ -4,3 +4,7 @@
 !/safe
 !/train_yolo
 !/.gitignore
+safe/web/ui-website/node_modules/
+safe/web/ui-website/dist/
+safe/web/ui-website/tsconfig.tsbuildinfo
+
