@@ -99,13 +99,13 @@ export function Header({ state, isManual, onPowerPress, onHomePress }: HeaderPro
             aria-label={isOff ? 'Power on system' : 'Power off system'}
             className={`flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border transition-transform active:scale-[0.96] active:opacity-75 ${
               isOff
-                ? 'border-danger opacity-70'
-                : 'border-danger-soft bg-danger'
+                ? 'border-border/40 bg-surface-high opacity-50 text-muted'
+                : 'border-danger-soft bg-danger text-white'
             }`}
             onClick={onPowerPress}
           >
             <span className="font-mono text-[11px] font-extrabold text-white">
-              {isOff ? 'ON' : 'OFF'}
+              {isOff ? 'OFF' : 'ON'}
             </span>
           </button>
         </div>
