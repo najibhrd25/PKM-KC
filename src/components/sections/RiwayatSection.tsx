@@ -35,7 +35,7 @@ const MONTHLY_RECORDS: MonthData[] = [
   {
     id: 'juni',
     name: 'Juni',
-    year: '2024',
+    year: '2026',
     totalTests: 4,
     successRate: '75%',
     avgDuration: '9.4s',
@@ -85,7 +85,7 @@ const MONTHLY_RECORDS: MonthData[] = [
   {
     id: 'juli',
     name: 'Juli',
-    year: '2024',
+    year: '2026',
     totalTests: 8,
     successRate: '87.5%',
     avgDuration: '7.6s',
@@ -135,36 +135,36 @@ const MONTHLY_RECORDS: MonthData[] = [
   {
     id: 'agustus',
     name: 'Agustus',
-    year: '2024',
+    year: '2026',
     totalTests: 12,
     successRate: '100%',
     avgDuration: '6.2s',
     records: [
       {
         id: 'agu-4',
-        date: '26 Agu',
-        time: '16:15',
-        title: 'Validasi Sistem Cerdas',
+        date: '30 Agu',
+        time: '16:45',
+        title: 'Validasi Akhir Pemadaman Cepat',
         freq: '45 Hz',
-        duration: '5.8s',
+        duration: '5.4s',
         status: 'success',
-        notes: 'Pemadaman cepat dengan akurasi deteksi 96.2%.',
+        notes: 'Pemadaman stabil, respon kolimator presisi dalam 5.4 detik.',
       },
       {
         id: 'agu-3',
-        date: '15 Agu',
+        date: '28 Agu',
         time: '15:32',
-        title: 'Skenario Api Lilin & Burner',
+        title: 'Pengujian Lapangan Beruntun',
         freq: '45 Hz',
-        duration: '8.2s',
+        duration: '5.8s',
         status: 'success',
-        notes: 'Deteksi akurat, pemadaman tuntas dalam 8.2 detik.',
+        notes: 'Deteksi akurat, 5 titik api berturut-turut padam sempurna.',
       },
       {
         id: 'agu-2',
-        date: '10 Agu',
-        time: '14:05',
-        title: 'Tracking Kamera Real-Time',
+        date: '26 Agu',
+        time: '14:10',
+        title: 'Validasi Tracking Kamera Real-Time',
         freq: '45 Hz',
         duration: '6.1s',
         status: 'success',
@@ -172,20 +172,20 @@ const MONTHLY_RECORDS: MonthData[] = [
       },
       {
         id: 'agu-1',
-        date: '03 Agu',
+        date: '25 Agu',
         time: '11:20',
-        title: 'Simulasi Multi-Run Beruntun',
+        title: 'Uji Daya Tahan & Stabilitas Termal',
         freq: '45 Hz',
         duration: '6.5s',
         status: 'success',
-        notes: '5 kali pengulangan sukses stabil tanpa kenaikan suhu.',
+        notes: 'Suhu aman 42.4°C, konsumsi RAM stabil 48%.',
       },
     ],
   },
   {
     id: 'september',
     name: 'September',
-    year: '2024',
+    year: '2026',
     totalTests: 6,
     successRate: '100%',
     avgDuration: '5.4s',
@@ -284,12 +284,13 @@ export function RiwayatSection({
           {/* RAM Usage */}
           <div className="flex flex-col justify-center rounded-lg border border-border/40 bg-surface-low/30 p-2.5">
             <span className="font-mono text-[10px] font-bold text-muted uppercase tracking-wider">
-              RAM (4GB)
+              RAM (1GB)
             </span>
             <div className="flex flex-row items-baseline gap-1 mt-0.5">
               <span className="font-mono text-[22px] font-black text-success">
-                34%
+                48%
               </span>
+              <span className="font-mono text-[10px] font-bold text-muted">480MB</span>
             </div>
           </div>
 
