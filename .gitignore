@@ -4,6 +4,7 @@ node_modules/
 # Expo
 .expo/
 dist/
+dev-dist/
 web-build/
 
 # Native build outputs

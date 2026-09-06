@@ -162,7 +162,7 @@ function createReportHtml({
           </div>
           <div class="metric-card">
             <span>Suhu Rata-rata</span>
-            <strong>${temperature ? temperature.toFixed(1) : '32.4'} °C</strong>
+            <strong>${temperature ? temperature.toFixed(1) : '39.0'} °C</strong>
           </div>
           <div class="metric-card">
             <span>Hardware RAM</span>

@@ -178,7 +178,7 @@ const MONTHLY_RECORDS: MonthData[] = [
         freq: '45 Hz',
         duration: '6.5s',
         status: 'success',
-        notes: 'Suhu aman 42.4°C, konsumsi RAM stabil 48%.',
+        notes: 'Suhu aman 39.2°C, konsumsi RAM stabil 48%.',
       },
     ],
   },
@@ -218,7 +218,7 @@ const MONTHLY_RECORDS: MonthData[] = [
         freq: '45 Hz',
         duration: '5.6s',
         status: 'success',
-        notes: 'Suhu Raspberry Pi & amplifier aman di 42°C.',
+        notes: 'Suhu Raspberry Pi & amplifier aman di 39.2°C.',
       },
     ],
   },
@@ -235,7 +235,7 @@ export function RiwayatSection({
 }: RiwayatSectionProps) {
   const [activeModalMonthId, setActiveModalMonthId] = useState<string | null>(null);
 
-  const cpuTemp = temperature > 0 ? temperature : 42.4;
+  const cpuTemp = temperature > 0 ? temperature : 39.2;
   const ping = 12;
   const totalFires = Math.max(activityLogsCount + 28, 30);
   const activeModalData = MONTHLY_RECORDS.find((m) => m.id === activeModalMonthId);
@@ -294,14 +294,14 @@ export function RiwayatSection({
             </div>
           </div>
 
-          {/* Storage Free */}
+            {/* Storage Free */}
           <div className="flex flex-col justify-center rounded-lg border border-border/40 bg-surface-low/30 p-2.5">
             <span className="font-mono text-[10px] font-bold text-muted uppercase tracking-wider">
               Storage Free
             </span>
             <div className="flex flex-row items-baseline gap-1 mt-0.5">
               <span className="font-mono text-[22px] font-black text-foreground">
-                14.2
+                3.8
               </span>
               <span className="font-mono text-[12px] font-bold text-muted">GB</span>
             </div>
