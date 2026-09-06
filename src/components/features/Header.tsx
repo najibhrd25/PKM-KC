@@ -1,4 +1,5 @@
-import { Home } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Home, Download } from 'lucide-react';
 import safeLogo from '@/assets/safe-logo.svg';
 import { StatusPill } from '@/components/ui/StatusPill';
 
@@ -9,7 +10,33 @@ interface HeaderProps {
   onHomePress: () => void;
 }
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+}
+
 export function Header({ state, isManual, onPowerPress, onHomePress }: HeaderProps) {
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+
+  useEffect(() => {
+    const handleBeforeInstall = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return;
+    await deferredPrompt.prompt();
+    const choice = await deferredPrompt.userChoice;
+    if (choice.outcome === 'accepted') {
+      setDeferredPrompt(null);
+    }
+  };
+
   const isOff = state === 'OFF_STATE';
   const isStarting = state === 'STARTUP_SEQUENCE';
 
@@ -36,6 +63,18 @@ export function Header({ state, isManual, onPowerPress, onHomePress }: HeaderPro
       </div>
 
       <div className="flex flex-row items-center gap-2">
+        {deferredPrompt && (
+          <button
+            type="button"
+            aria-label="Install App"
+            onClick={handleInstallClick}
+            className="flex h-11 items-center gap-1.5 px-3 rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-400 text-xs font-bold hover:bg-emerald-500/20 active:scale-95 transition-all shadow-sm"
+          >
+            <Download className="h-4 w-4" />
+            <span>Install</span>
+          </button>
+        )}
+
         <button
           type="button"
           aria-label="Home Servo"
