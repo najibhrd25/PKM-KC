@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-
 import type { JoystickPosition } from '@/data/types';
 import { sendServoPosition } from '@/lib/safeApi';
+import { useSystemState } from '@/store/useSystemState';
 
 const MAX_RADIUS = 38;
-
-/** Interval minimum antar pengiriman jog ke Pi (ms) — mencegah spam request */
 const JOG_THROTTLE_MS = 100;
 
 function clampToCircle(x: number, y: number): JoystickPosition {
@@ -35,14 +33,14 @@ export function useJoystick(enabled: boolean) {
     if (now - lastSentRef.current < JOG_THROTTLE_MS) return;
 
     lastSentRef.current = now;
-    sendServoPosition(position).catch(() => {
-      // Error sudah di-log di dalam safeApi — di sini cukup swallow
-    });
+    sendServoPosition(position).catch(() => {});
   }, [enabled, position]);
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (!enabled) return;
+      // Reset 10s inactivity countdown
+      useSystemState.getState().pingActivity();
       draggingRef.current = true;
       startRef.current = { x: e.clientX, y: e.clientY };
       (e.target as HTMLElement).setPointerCapture(e.pointerId);
@@ -53,6 +51,8 @@ export function useJoystick(enabled: boolean) {
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
       if (!enabled || !draggingRef.current) return;
+      // Reset 10s inactivity countdown while actively dragging
+      useSystemState.getState().pingActivity();
       const dx = e.clientX - startRef.current.x;
       const dy = e.clientY - startRef.current.y;
       setPosition(clampToCircle(dx, dy));
@@ -61,6 +61,9 @@ export function useJoystick(enabled: boolean) {
   );
 
   const handlePointerUp = useCallback(() => {
+    if (draggingRef.current) {
+      useSystemState.getState().pingActivity();
+    }
     draggingRef.current = false;
     setPosition({ x: 0, y: 0 });
   }, []);

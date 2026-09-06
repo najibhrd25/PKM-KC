@@ -4,6 +4,7 @@ import { JoystickControls } from '@/components/features/JoystickControls';
 import { ActivityLog } from '@/components/features/ActivityLog';
 import type { CameraSource } from '@/lib/cameraSource';
 import type { ActivityLogItem } from '@/data/types';
+import { useSystemState } from '@/store/useSystemState';
 
 interface ManualModeSectionProps {
   streamSource: CameraSource;
@@ -39,16 +40,14 @@ export function ManualModeSection({
   onExport,
 }: ManualModeSectionProps) {
   return (
-    <div className="flex flex-col gap-4">
-      {/* Title Header */}
-      <h2 className="text-center font-mono text-xs font-black tracking-widest text-danger-soft uppercase">
-        MANUAL CONTROLS ACTIVE
-      </h2>
-
+    <div
+      className="flex flex-col gap-2.5"
+      onPointerDownCapture={() => useSystemState.getState().pingActivity()}
+    >
       {/* Camera Panel */}
       <VideoPanel isOff={false} cameraVisible={true} source={streamSource} />
 
-      <div className="flex flex-row gap-3 min-h-[286px] w-full">
+      <div className="flex flex-row gap-2.5 min-h-[286px] w-full">
         {/* Interactive Sensor Panel */}
         <SensorPanel
           waveform={waveform}

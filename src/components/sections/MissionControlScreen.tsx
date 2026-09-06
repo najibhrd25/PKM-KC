@@ -94,12 +94,24 @@ export function MissionControlScreen() {
     <div className="flex min-h-dvh w-full flex-1 flex-col bg-background">
       <Header state={state} isManual={isManual} onPowerPress={handlePowerPress} onHomePress={handleHomePress} />
 
-      <div className="flex w-full flex-1 flex-col gap-4 overflow-y-auto px-4 pb-36">
-        <div className="flex flex-col gap-1 pt-2">
-          <span className="font-mono text-[10px] tracking-[2.4px] text-muted">
-            {activeTab === 'manual' ? 'MANUAL CONTROL ACTIVE' : activeTab === 'analisis' ? 'SYSTEM DIAGNOSTICS' : 'ACTIVE MONITORING'}
+      <div className="flex w-full flex-1 flex-col gap-3 overflow-y-auto px-4 pb-20">
+        <div className="flex flex-col gap-0.5 pt-1">
+          <span
+            className={`font-mono text-[9px] font-bold tracking-[2px] ${
+              activeTab === 'auto'
+                ? 'text-success'
+                : activeTab === 'manual'
+                ? 'text-danger-soft'
+                : 'text-info'
+            }`}
+          >
+            {activeTab === 'manual'
+              ? 'MANUAL CONTROL ACTIVE'
+              : activeTab === 'analisis'
+              ? 'SYSTEM DIAGNOSTICS'
+              : 'AUTOMATIC MONITORING ACTIVE'}
           </span>
-          <h1 className="text-[30px] font-black tracking-[-1px] text-foreground">
+          <h1 className="text-[22px] font-black tracking-tight text-foreground leading-tight">
             MISSION CONTROL
           </h1>
         </div>

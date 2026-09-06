@@ -28,44 +28,39 @@ export function AutoModeSection({
   onExport,
 }: AutoModeSectionProps) {
   return (
-    <div className="flex flex-col gap-4">
-      {/* Title Header */}
-      <h2 className="text-center font-mono text-xs font-black tracking-widest text-success uppercase">
-        AUTOMATIC SYSTEMS MONITORING
-      </h2>
-
+    <div className="flex flex-col gap-2.5">
       {/* Camera Panel */}
       <VideoPanel isOff={false} cameraVisible={true} source={streamSource} />
 
       {/* Read-Only Stats Cards */}
-      <div className="flex flex-row gap-3">
+      <div className="flex flex-row gap-2.5">
         <SensorCard>
-          <div className="flex flex-col items-center justify-center rounded border border-border/40 bg-surface-low/20 p-2.5">
-            <span className="font-mono text-[9px] text-muted mb-1.5 uppercase tracking-wider">waveform</span>
-            <span className="font-mono text-[12px] font-bold text-foreground uppercase">{waveform}</span>
+          <div className="flex flex-col items-center justify-center rounded-lg border border-border/40 bg-surface-low/30 py-3 px-3">
+            <span className="font-mono text-[11px] font-bold text-muted mb-1 uppercase tracking-wider">waveform</span>
+            <span className="font-mono text-[16px] font-black text-foreground uppercase tracking-wide">{waveform}</span>
           </div>
-          <div className="flex flex-col items-center justify-center rounded border border-border/40 bg-surface-low/20 p-2.5">
-            <span className="font-mono text-[9px] text-muted mb-1.5 uppercase tracking-wider">freq</span>
-            <div className="flex flex-row items-center gap-1">
-              <span className="font-mono text-[12px] font-bold text-foreground">{frequency}</span>
-              <span className="font-mono text-[9px] text-muted">Hz</span>
+          <div className="flex flex-col items-center justify-center rounded-lg border border-border/40 bg-surface-low/30 py-3 px-3">
+            <span className="font-mono text-[11px] font-bold text-muted mb-1 uppercase tracking-wider">freq</span>
+            <div className="flex flex-row items-baseline gap-1">
+              <span className="font-mono text-[19px] font-black text-foreground">{frequency}</span>
+              <span className="font-mono text-[12px] font-bold text-muted">Hz</span>
             </div>
           </div>
         </SensorCard>
 
         <SensorCard>
-          <div className="flex flex-col items-center justify-center rounded border border-border/40 bg-surface-low/20 p-2.5">
-            <span className="font-mono text-[9px] text-muted mb-1.5 uppercase tracking-wider">amplitude</span>
-            <div className="flex flex-row items-center gap-1">
-              <span className="font-mono text-[12px] font-bold text-foreground">{Math.round(amplitude * 100)}</span>
-              <span className="font-mono text-[9px] text-muted">%</span>
+          <div className="flex flex-col items-center justify-center rounded-lg border border-border/40 bg-surface-low/30 py-3 px-3">
+            <span className="font-mono text-[11px] font-bold text-muted mb-1 uppercase tracking-wider">amplitude</span>
+            <div className="flex flex-row items-baseline gap-1">
+              <span className="font-mono text-[19px] font-black text-foreground">{Math.round(amplitude * 100)}</span>
+              <span className="font-mono text-[12px] font-bold text-muted">%</span>
             </div>
           </div>
-          <div className="flex flex-col items-center justify-center rounded border border-border/40 bg-surface-low/20 p-2.5">
-            <span className="font-mono text-[9px] text-muted mb-1.5 uppercase tracking-wider">duration</span>
-            <div className="flex flex-row items-center gap-1">
-              <span className="font-mono text-[12px] font-bold text-foreground">{duration}</span>
-              <span className="font-mono text-[9px] text-muted">s</span>
+          <div className="flex flex-col items-center justify-center rounded-lg border border-border/40 bg-surface-low/30 py-3 px-3">
+            <span className="font-mono text-[11px] font-bold text-muted mb-1 uppercase tracking-wider">duration</span>
+            <div className="flex flex-row items-baseline gap-1">
+              <span className="font-mono text-[19px] font-black text-foreground">{duration}</span>
+              <span className="font-mono text-[12px] font-bold text-muted">s</span>
             </div>
           </div>
         </SensorCard>

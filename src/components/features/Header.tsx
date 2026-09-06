@@ -20,11 +20,11 @@ export function Header({ state, isManual, onPowerPress, onHomePress }: HeaderPro
   const isPulsing = !isOff && !isStarting && !isManual;
 
   return (
-    <div className="flex w-full flex-row items-center justify-between px-5 py-3.5">
-      <div className="flex flex-row items-center gap-1">
-        <img src={safeLogo} alt="S.A.F.E. Logo" className="h-[70px] w-[70px]" />
+    <div className="flex w-full flex-row items-center justify-between px-4 py-2.5">
+      <div className="flex flex-row items-center gap-2.5">
+        <img src={safeLogo} alt="S.A.F.E. Logo" className="h-[54px] w-[54px] object-contain" />
         <div>
-          <p className="mb-1 text-lg font-black tracking-[-0.5px] text-foreground">
+          <p className="text-lg font-black tracking-[-0.5px] text-foreground leading-none mb-1">
             S.A.F.E.
           </p>
           <StatusPill
@@ -39,7 +39,7 @@ export function Header({ state, isManual, onPowerPress, onHomePress }: HeaderPro
         <button
           type="button"
           aria-label="Home Servo"
-          className={`flex h-14 w-14 cursor-pointer items-center justify-center rounded-full border transition-transform active:scale-[0.96] active:opacity-75 ${
+          className={`flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border transition-transform active:scale-[0.96] active:opacity-75 ${
             isOff
               ? 'border-border/30 opacity-40'
               : 'border-border bg-surface-high'
@@ -47,13 +47,13 @@ export function Header({ state, isManual, onPowerPress, onHomePress }: HeaderPro
           onClick={onHomePress}
           disabled={isOff || isStarting}
         >
-          <Home className="h-5 w-5 text-muted" />
+          <Home className="h-4.5 w-4.5 text-muted" />
         </button>
 
         <button
           type="button"
           aria-label={isOff ? 'Power on system' : 'Power off system'}
-          className={`flex h-14 w-14 cursor-pointer items-center justify-center rounded-full border transition-transform active:scale-[0.96] active:opacity-75 ${
+          className={`flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border transition-transform active:scale-[0.96] active:opacity-75 ${
             isOff
               ? 'border-danger opacity-70'
               : 'border-danger-soft bg-danger'
