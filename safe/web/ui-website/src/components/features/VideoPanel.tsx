@@ -1,7 +1,6 @@
+import { useEffect, useRef } from 'react';
 import type { CameraSource } from '@/lib/cameraSource';
-import { getCameraStreamUrl } from '@/lib/safeApi';
 import { Card } from '@/components/ui/Card';
-import { StatusPill } from '@/components/ui/StatusPill';
 
 interface VideoPanelProps {
   isOff: boolean;
@@ -9,46 +8,53 @@ interface VideoPanelProps {
   source: CameraSource;
 }
 
-export function VideoPanel({ isOff, cameraVisible, source }: VideoPanelProps) {
-  // Tentukan URL stream berdasarkan jenis sumber kamera
-  const isLiveStream = source.kind === 'raspberry-pi-stream' || (cameraVisible && !isOff);
-  const streamUrl = source.streamUrl ?? getCameraStreamUrl();
+const START_TIME = 0.9888; // 00:55 (55 detik)
+
+export function VideoPanel({ isOff }: VideoPanelProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const setInitialTime = () => {
+      video.currentTime = START_TIME;
+      video.play().catch(() => { });
+    };
+
+    const handleEnded = () => {
+      video.currentTime = START_TIME;
+      video.play().catch(() => { });
+    };
+
+    if (video.readyState >= 1) {
+      setInitialTime();
+    } else {
+      video.addEventListener('loadedmetadata', setInitialTime, { once: true });
+    }
+
+    video.addEventListener('ended', handleEnded);
+
+    return () => {
+      video.removeEventListener('loadedmetadata', setInitialTime);
+      video.removeEventListener('ended', handleEnded);
+    };
+  }, []);
 
   return (
     <Card
-      className={`relative aspect-square overflow-hidden ${
-        isOff ? 'opacity-[0.45]' : ''
-      }`}
-    >
-      <div
-        className={`absolute inset-0 bg-[#050505] ${
-          cameraVisible && !isOff ? 'opacity-[0.72]' : 'opacity-20'
+      className={`relative w-full aspect-[16/10.5] max-h-[235px] overflow-hidden bg-black ${isOff ? 'opacity-[0.45]' : ''
         }`}
-      >
-        {/* Live MJPEG stream dari Raspberry Pi */}
-        {isLiveStream && (
-          <img
-            src={streamUrl}
-            alt="Live camera stream"
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-        )}
-
-        {/* Overlay efek warna */}
-        <div className="absolute inset-0 bg-danger/[0.035]" />
-      </div>
-
-      <div className="absolute left-4 top-4">
-        <StatusPill label={isOff ? 'OFFLINE' : 'LIVE'} tone={isOff ? 'idle' : 'danger'} />
-      </div>
-
-      <div className="absolute inset-x-0 bottom-0 flex flex-row items-center justify-between bg-surface/90 px-4 py-3">
-        <span className="font-mono text-[10px] tracking-wider text-muted">
-          {source.label}
-        </span>
-        <span className="font-mono text-[10px] font-extrabold tracking-wider text-foreground">
-          {source.kind.toUpperCase()}
-        </span>
+    >
+      <div className="absolute inset-0 overflow-hidden">
+        <video
+          ref={videoRef}
+          src="/Recordddddd.mp4"
+          autoPlay
+          muted
+          playsInline
+          className="h-full w-full object-cover object-center scale-[1.18] origin-center"
+        />
       </div>
     </Card>
   );

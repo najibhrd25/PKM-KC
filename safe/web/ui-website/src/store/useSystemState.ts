@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { ActivityLogItem } from '@/data/types';
 
 import {
+  INITIAL_ACTIVITY_LOGS,
   LIVE_SENSOR_SNAPSHOT,
   MANUAL_MODE_PASSWORD,
   STARTUP_TIMELINE_MS,
@@ -66,7 +67,7 @@ export const useSystemState = create<SystemStore>()((set, get) => ({
   frequency: 45,
   amplitude: 0.855,
   duration: 30,
-  activityLogs: [],
+  activityLogs: INITIAL_ACTIVITY_LOGS,
 
   setWaveform: (w) => { set({ waveform: w }); get().pingActivity(); },
   setFrequency: (f) => { set({ frequency: f }); get().pingActivity(); },
@@ -94,7 +95,7 @@ export const useSystemState = create<SystemStore>()((set, get) => ({
     const { state, _initSSE } = get();
     if (state !== 'OFF_STATE') return;
 
-    set({ state: 'STARTUP_SEQUENCE', activityLogs: [] });
+    set({ state: 'STARTUP_SEQUENCE', activityLogs: INITIAL_ACTIVITY_LOGS });
     _initSSE();
     get()._runStartupSequence();
   },
@@ -114,19 +115,14 @@ export const useSystemState = create<SystemStore>()((set, get) => ({
       frequency: 45,
       amplitude: 0.855,
       duration: 30,
-      activityLogs: [],
+      activityLogs: INITIAL_ACTIVITY_LOGS,
     });
   },
 
   activateManual: () => {
-    const { state } = get();
-    if (state !== 'AUTO_MODE') return;
-
     // Kirim perintah ke Pi untuk masuk mode manual
     setSafeMode({ auto: false }).catch((err) => {
       console.warn('[System] Gagal mengirim mode manual ke Pi:', err);
-      // Tetap lanjut ke manual di sisi UI meski request gagal
-      // (saat development tanpa Pi terhubung)
     });
 
     set({
@@ -134,14 +130,18 @@ export const useSystemState = create<SystemStore>()((set, get) => ({
       isManual: true,
     });
 
-    // Start inactivity timer and send first heartbeat
-    get().pingActivity();
+    // Mulai hitung mundur 10 detik inaktivitas saat masuk mode manual
+    if (inactivityTimer) clearTimeout(inactivityTimer);
+    inactivityTimer = setTimeout(() => {
+      get().deactivateManual();
+    }, INACTIVITY_TIMEOUT_MS);
+
+    // Kirim heartbeat pertama
+    sendHeartbeat().catch(() => {});
+    lastHeartbeatTime = Date.now();
   },
 
   deactivateManual: () => {
-    const { state } = get();
-    if (state !== 'MANUAL_MODE') return;
-
     if (heartbeatInterval) clearInterval(heartbeatInterval);
     if (inactivityTimer) clearTimeout(inactivityTimer);
     heartbeatInterval = null;
