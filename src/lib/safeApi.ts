@@ -103,7 +103,7 @@ const JOG_SENSITIVITY = 0.15;
 
 export async function sendServoPosition(position: JoystickPosition): Promise<ApiResponse> {
   const d_yaw = position.x * JOG_SENSITIVITY;
-  const d_pitch = -position.y * JOG_SENSITIVITY; // Inversi Y: atas = pitch naik
+  const d_pitch = position.y * JOG_SENSITIVITY; // Sesuai arah fisik: atas = atas, bawah = bawah
 
   return safeFetch(`${BASE_URL}/cmd/jog`, {
     method: 'POST',
