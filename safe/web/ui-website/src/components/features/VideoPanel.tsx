@@ -1,5 +1,7 @@
+import { getCameraStreamUrl } from '@/lib/safeApi';
 import type { CameraSource } from '@/lib/cameraSource';
 import { Card } from '@/components/ui/Card';
+import { useState } from 'react';
 // import { useEffect, useRef } from 'react'; // [AKTIFKAN JIKA PAKAI VIDEO]
 
 interface VideoPanelProps {
@@ -37,6 +39,9 @@ export function VideoPanel({ isOff }: VideoPanelProps) {
   //   };
   // }, []);
 
+  const streamUrl = getCameraStreamUrl();
+  const [imgSrc, setImgSrc] = useState(streamUrl);
+
   return (
     <Card
       className={`relative w-full aspect-[16/10.5] max-h-[235px] overflow-hidden bg-black ${isOff ? 'opacity-[0.45]' : ''
@@ -44,11 +49,17 @@ export function VideoPanel({ isOff }: VideoPanelProps) {
     >
       <div className="absolute inset-0 overflow-hidden">
         {/* ==================================================================== */}
-        {/* 1. OPSI FOTO AKTIF (LIVE-CAMERA)                                      */}
+        {/* 1. STREAM KAMERA LIVE DARI RASPBERRY PI (Fallback ke dummy jika offline) */}
         {/* ==================================================================== */}
         <img
-          src="/live-camera.png"
+          src={imgSrc}
           alt="Live Camera Feed"
+          onError={() => {
+            // Jika koneksi ke Pi belum menyala/gagal, otomatis pakai foto dummy
+            if (imgSrc !== '/live-camera.png') {
+              setImgSrc('/live-camera.png');
+            }
+          }}
           className="h-full w-full object-cover object-[center_50%] scale-[1.12] origin-center"
         />
 

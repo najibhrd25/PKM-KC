@@ -187,11 +187,22 @@ class WebBridge(BaseModule):
     def _serve(self):
         import uvicorn
         from fastapi import FastAPI, Request
+        from fastapi.middleware.cors import CORSMiddleware
         from fastapi.responses import (
             StreamingResponse, HTMLResponse, JSONResponse)
         from pathlib import Path
 
         app = FastAPI()
+
+        # Izinkan akses CORS dari Vercel / PWA mobile
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+
         static_dir = Path(__file__).parent / "static"
 
         @app.get("/", response_class=HTMLResponse)
