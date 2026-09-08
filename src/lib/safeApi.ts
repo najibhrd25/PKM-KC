@@ -107,36 +107,65 @@ export async function sendServoPosition(position: JoystickPosition): Promise<Api
 }
 
 /**
- * 3. SHOOT — Menembakkan gelombang akustik secara manual
+ * 3. AUDIO CMD — Mengontrol pemancaran gelombang akustik
  *
- * Endpoint Pi: POST /cmd/shoot
- * Payload:     { frequency: number, amplitude?: number, duration?: number }
+ * Endpoint Pi: POST /cmd/audio
+ * Payload:     { action: "play", freq: number, amplitude?: number, duration?: number, waveform?: string }
  */
 export async function triggerAcousticPulse(payload: TriggerPayload): Promise<ApiResponse> {
-  return safeFetch(`${BASE_URL}/cmd/shoot`, {
+  return safeFetch(`${BASE_URL}/cmd/audio`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      frequency: payload.frequency,
+      action: 'play',
+      freq: payload.frequency,
       amplitude: payload.amplitude,
       duration: payload.duration,
-      waveform: payload.waveform
+      waveform: payload.waveform,
     }),
   });
 }
 
 /**
- * SERVO HOME — Mengembalikan servo ke titik tengah
+ * STOP AUDIO — Menghentikan pemancaran gelombang akustik segera
+ *
+ * Endpoint Pi: POST /cmd/audio
+ * Payload:     { action: "stop" }
  */
-export async function homeServo(): Promise<ApiResponse> {
-  return safeFetch(`${BASE_URL}/cmd/home`, { method: 'POST' });
+export async function stopAudio(): Promise<ApiResponse> {
+  return safeFetch(`${BASE_URL}/cmd/audio`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'stop' }),
+  });
 }
 
 /**
- * STOP ACTUATORS — Menghentikan audio dan tracking, mengembalikan servo ke home
+ * SERVO HOME — Mengembalikan servo ke titik tengah (center)
+ *
+ * Endpoint Pi: POST /cmd/servo
+ * Payload:     { action: "home" }
+ */
+export async function homeServo(): Promise<ApiResponse> {
+  return safeFetch(`${BASE_URL}/cmd/servo`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'home' }),
+  });
+}
+
+/**
+ * SERVO STOP (TORQUE OFF) — Mematikan torsi servo untuk keamanan
+ *
+ * Endpoint Pi: POST /cmd/servo
+ * Payload:     { action: "torque_off" }
  */
 export async function stopServo(): Promise<ApiResponse> {
-  return safeFetch(`${BASE_URL}/cmd/stop`, { method: 'POST' });
+  return safeFetch(`${BASE_URL}/cmd/servo`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'torque_off' }),
+  });
 }
 
 /**
