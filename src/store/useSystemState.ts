@@ -136,9 +136,13 @@ export const useSystemState = create<SystemStore>()((set, get) => ({
       get().deactivateManual();
     }, INACTIVITY_TIMEOUT_MS);
 
-    // Kirim heartbeat pertama
+    // Kirim heartbeat pertama & jalankan interval heartbeat tiap 2 detik
     sendHeartbeat().catch(() => {});
     lastHeartbeatTime = Date.now();
+    if (heartbeatInterval) clearInterval(heartbeatInterval);
+    heartbeatInterval = setInterval(() => {
+      sendHeartbeat().catch(() => {});
+    }, HEARTBEAT_INTERVAL_MS);
   },
 
   deactivateManual: () => {
