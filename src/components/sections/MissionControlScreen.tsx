@@ -7,7 +7,7 @@ import { ManualModeSection } from '@/components/sections/ManualModeSection';
 import { RiwayatSection } from '@/components/sections/RiwayatSection';
 import { createRaspberryPiCameraSource } from '@/lib/cameraSource';
 import { shareActivityReport } from '@/lib/activityReport';
-import { triggerAcousticPulse, getCameraStreamUrl, homeServo, stopServo } from '@/lib/safeApi';
+import { triggerAcousticPulse, stopAudio, getCameraStreamUrl, homeServo, stopServo } from '@/lib/safeApi';
 import { useSystemState } from '@/store/useSystemState';
 
 export function MissionControlScreen() {
@@ -21,6 +21,7 @@ export function MissionControlScreen() {
     duration,
     activityLogs,
     isManual,
+    isAudioPlaying,
     startupPhase,
     state,
     temperature,
@@ -62,7 +63,11 @@ export function MissionControlScreen() {
   }
 
   function handleShoot() {
-    triggerAcousticPulse({ action: 'shoot', waveform, frequency, amplitude, duration }).catch(() => {});
+    if (isAudioPlaying) {
+      stopAudio().catch(() => {});
+    } else {
+      triggerAcousticPulse({ action: 'shoot', waveform, frequency, amplitude, duration }).catch(() => {});
+    }
   }
 
   function handleTabChange(tab: 'auto' | 'manual' | 'analisis') {
@@ -123,6 +128,7 @@ export function MissionControlScreen() {
             frequency={frequency}
             amplitude={amplitude}
             duration={duration}
+            isAudioPlaying={isAudioPlaying}
             setWaveform={setWaveform}
             setFrequency={setFrequency}
             setAmplitude={setAmplitude}

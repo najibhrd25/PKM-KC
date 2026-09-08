@@ -99,11 +99,12 @@ export async function setSafeMode(payload: SetModePayload): Promise<ApiResponse>
  * Koordinat joystick (x, y dalam piksel) dikonversi menjadi delta derajat.
  * Sensitivitas diatur oleh JOG_SENSITIVITY.
  */
-const JOG_SENSITIVITY = 0.15;
+const JOG_STEP_DEG = 3.0; // Sesuai LIMITS.jog_step_deg di web asli (static/index.html)
 
 export async function sendServoPosition(position: JoystickPosition): Promise<ApiResponse> {
-  const d_yaw = position.x * JOG_SENSITIVITY;
-  const d_pitch = position.y * JOG_SENSITIVITY; // Sesuai arah fisik: atas = atas, bawah = bawah
+  // position.x & position.y sudah dinormalisasi -1..+1
+  const d_yaw = (position.x / 38) * JOG_STEP_DEG;
+  const d_pitch = -(position.y / 38) * JOG_STEP_DEG; // Dibalik agar geser ke atas = naik ke atas, ke bawah = turun ke bawah
 
   return safeFetch(`${BASE_URL}/cmd/jog`, {
     method: 'POST',

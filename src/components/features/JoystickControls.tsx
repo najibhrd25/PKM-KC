@@ -9,6 +9,7 @@ interface JoystickControlsProps {
   isOff: boolean;
   isStarting: boolean;
   isManual: boolean;
+  isAudioPlaying?: boolean;
   frequency: number;
   onAuthorize: (password: string) => boolean;
   onShoot: () => void;
@@ -18,6 +19,7 @@ export function JoystickControls({
   isOff,
   isStarting,
   isManual,
+  isAudioPlaying = false,
   frequency,
   onAuthorize,
   onShoot,
@@ -102,7 +104,9 @@ export function JoystickControls({
               : isStarting
                 ? 'INITIALIZING'
                 : isManual
-                  ? 'SHOOT'
+                  ? isAudioPlaying
+                    ? 'AUDIO OFF'
+                    : 'AUDIO ON'
                   : 'UNLOCK'
           }
           variant={isManual ? 'primary' : 'secondary'}

@@ -20,42 +20,51 @@ function clampToCircle(x: number, y: number): JoystickPosition {
 
 export function useJoystick(enabled: boolean) {
   const [position, setPosition] = useState<JoystickPosition>({ x: 0, y: 0 });
-  const lastSentRef = useRef<number>(0);
+  const posRef = useRef<JoystickPosition>({ x: 0, y: 0 });
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const draggingRef = useRef(false);
   const startRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
-  // Kirim posisi joystick ke Raspberry Pi saat bergerak (throttled)
-  useEffect(() => {
-    if (!enabled) return;
-    if (position.x === 0 && position.y === 0) return;
+  const startJogLoop = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      if (!enabled || !draggingRef.current) return;
+      const { x, y } = posRef.current;
+      const joyNX = x / MAX_RADIUS;
+      const joyNY = y / MAX_RADIUS;
+      if (Math.abs(joyNX) < 0.05 && Math.abs(joyNY) < 0.05) return;
+      sendServoPosition({ x, y }).catch(() => {});
+    }, JOG_THROTTLE_MS);
+  }, [enabled]);
 
-    const now = Date.now();
-    if (now - lastSentRef.current < JOG_THROTTLE_MS) return;
-
-    lastSentRef.current = now;
-    sendServoPosition(position).catch(() => {});
-  }, [enabled, position]);
+  const stopJogLoop = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
 
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (!enabled) return;
-      // Reset 10s inactivity countdown
       useSystemState.getState().pingActivity();
       draggingRef.current = true;
       startRef.current = { x: e.clientX, y: e.clientY };
       (e.target as HTMLElement).setPointerCapture(e.pointerId);
+      startJogLoop();
     },
-    [enabled],
+    [enabled, startJogLoop],
   );
 
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
       if (!enabled || !draggingRef.current) return;
-      // Reset 10s inactivity countdown while actively dragging
       useSystemState.getState().pingActivity();
       const dx = e.clientX - startRef.current.x;
       const dy = e.clientY - startRef.current.y;
-      setPosition(clampToCircle(dx, dy));
+      const clamped = clampToCircle(dx, dy);
+      posRef.current = clamped;
+      setPosition(clamped);
     },
     [enabled],
   );
@@ -65,8 +74,10 @@ export function useJoystick(enabled: boolean) {
       useSystemState.getState().pingActivity();
     }
     draggingRef.current = false;
+    posRef.current = { x: 0, y: 0 };
     setPosition({ x: 0, y: 0 });
-  }, []);
+    stopJogLoop();
+  }, [stopJogLoop]);
 
   return {
     position,

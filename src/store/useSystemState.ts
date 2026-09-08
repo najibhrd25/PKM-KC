@@ -39,6 +39,7 @@ interface SystemStore {
   frequency: number;
   amplitude: number;
   duration: number;
+  isAudioPlaying: boolean;
   activityLogs: ActivityLogItem[];
   setWaveform: (w: string) => void;
   setFrequency: (f: number) => void;
@@ -67,6 +68,7 @@ export const useSystemState = create<SystemStore>()((set, get) => ({
   frequency: 45,
   amplitude: 0.855,
   duration: 30,
+  isAudioPlaying: false,
   activityLogs: INITIAL_ACTIVITY_LOGS,
 
   setWaveform: (w) => { set({ waveform: w }); get().pingActivity(); },
@@ -246,6 +248,17 @@ export const useSystemState = create<SystemStore>()((set, get) => ({
             detail: `Switched to ${d.value.toUpperCase()} mode`,
             tone: 'info'
           };
+        } else if (d.type === 'audio') {
+          set({ isAudioPlaying: !!d.playing });
+          if (d.playing) {
+            logItem = {
+              id: Date.now().toString() + Math.random(),
+              time: timeStr,
+              title: 'AUDIO ACTIVE',
+              detail: `Memancarkan gelombang ${d.freq} Hz ${d.waveform}`,
+              tone: 'danger'
+            };
+          }
         } else if (d.type === 'detection') {
           logItem = {
             id: Date.now().toString() + Math.random(),

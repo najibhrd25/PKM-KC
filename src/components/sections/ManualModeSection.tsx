@@ -12,6 +12,7 @@ interface ManualModeSectionProps {
   frequency: number;
   amplitude: number;
   duration: number;
+  isAudioPlaying?: boolean;
   setWaveform: (w: string) => void;
   setFrequency: (f: number) => void;
   setAmplitude: (a: number) => void;
@@ -29,6 +30,7 @@ export function ManualModeSection({
   frequency,
   amplitude,
   duration,
+  isAudioPlaying = false,
   setWaveform,
   setFrequency,
   setAmplitude,
@@ -67,6 +69,7 @@ export function ManualModeSection({
           isOff={false}
           isStarting={false}
           isManual={true}
+          isAudioPlaying={isAudioPlaying}
           frequency={frequency}
           onAuthorize={() => true}
           onShoot={onShoot}
