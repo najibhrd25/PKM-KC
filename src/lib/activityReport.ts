@@ -27,12 +27,16 @@ function createReportHtml({
   const rows = logs
     .map(
       (log) => {
-        const isSuccess = log.tone === 'success' || log.title.includes('PADAM');
-        const isDanger = log.tone === 'danger' || log.title.includes('TERDETEKSI') || log.title.includes('PULSE');
-        const badgeBg = isSuccess ? '#ecfdf5' : isDanger ? '#fef2f2' : '#f0f9ff';
-        const badgeColor = isSuccess ? '#059669' : isDanger ? '#dc2626' : '#0284c7';
-        const badgeBorder = isSuccess ? '#a7f3d0' : isDanger ? '#fecaca' : '#bae6fd';
-        const badgeText = isSuccess ? 'PADAM' : isDanger ? 'PROSES' : 'INFO';
+        const isExtinguished = log.title.includes('PADAM') && !log.title.includes('BELUM');
+        const isFireDetected = log.title.includes('TERDETEKSI') || log.title.includes('CONFIRMED');
+        const isPulseActive = log.title.includes('PULSE') || log.title.includes('EMITTING');
+        const isSuccess = log.tone === 'success' && isExtinguished;
+        const isDanger = log.tone === 'danger' || isFireDetected || isPulseActive;
+
+        const badgeBg = isFireDetected ? '#fef2f2' : isPulseActive ? '#fff7ed' : isSuccess ? '#ecfdf5' : '#f0f9ff';
+        const badgeColor = isFireDetected ? '#dc2626' : isPulseActive ? '#ea580c' : isSuccess ? '#059669' : '#0284c7';
+        const badgeBorder = isFireDetected ? '#fecaca' : isPulseActive ? '#fed7aa' : isSuccess ? '#a7f3d0' : '#bae6fd';
+        const badgeText = isFireDetected ? 'TERDETEKSI' : isPulseActive ? 'PULSE AKTIF' : isSuccess ? 'PADAM' : 'TRACKING';
 
         return `
         <tr>
