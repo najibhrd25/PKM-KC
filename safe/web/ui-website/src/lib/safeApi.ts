@@ -9,8 +9,13 @@ import type { JoystickPosition } from '@/data/types';
 // ============================================================================
 
 export const RASPBERRY_PI_IP = '10.7.101.142'; // IP Pi lokal
-// BASE_URL publik dari Cloudflare Tunnel Raspberry Pi:
-const BASE_URL = 'https://safe1.abedtgr.my.id';
+// Otomatis pilih: jika buka di localhost/jaringan lokal pakai IP lokal, jika di Vercel pakai tunnel
+const isLocalhost = typeof window !== 'undefined' && 
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.startsWith('10.') || window.location.hostname.startsWith('192.168.'));
+
+export const BASE_URL = isLocalhost
+  ? `http://${RASPBERRY_PI_IP}:8000`
+  : 'https://safe1.abedtgr.my.id';
 
 // Timeout default untuk setiap request (ms)
 const REQUEST_TIMEOUT = 5000;

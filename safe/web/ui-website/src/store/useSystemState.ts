@@ -130,12 +130,6 @@ export const useSystemState = create<SystemStore>()((set, get) => ({
       isManual: true,
     });
 
-    // Mulai hitung mundur 10 detik inaktivitas saat masuk mode manual
-    if (inactivityTimer) clearTimeout(inactivityTimer);
-    inactivityTimer = setTimeout(() => {
-      get().deactivateManual();
-    }, INACTIVITY_TIMEOUT_MS);
-
     // Kirim heartbeat pertama & jalankan interval heartbeat tiap 2 detik
     sendHeartbeat().catch(() => {});
     lastHeartbeatTime = Date.now();
