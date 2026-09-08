@@ -8,8 +8,9 @@ import type { JoystickPosition } from '@/data/types';
 // Wi-Fi yang sama.
 // ============================================================================
 
-export const RASPBERRY_PI_IP = '10.7.101.64'; // Ganti dengan IP Pi Anda
-const BASE_URL = `http://${RASPBERRY_PI_IP}:8000`;
+export const RASPBERRY_PI_IP = '10.7.101.142'; // IP Pi lokal
+// BASE_URL publik dari Cloudflare Tunnel Raspberry Pi:
+const BASE_URL = 'https://safe1.abedtgr.my.id';
 
 // Timeout default untuk setiap request (ms)
 const REQUEST_TIMEOUT = 5000;
