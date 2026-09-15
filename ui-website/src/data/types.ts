@@ -17,7 +17,7 @@ export interface ActivityLogItem {
   time: string;
   title: string;
   detail: string;
-  tone: 'danger' | 'success' | 'info';
+  tone: 'danger' | 'warning' | 'success' | 'info';
 }
 
 export interface JoystickPosition {

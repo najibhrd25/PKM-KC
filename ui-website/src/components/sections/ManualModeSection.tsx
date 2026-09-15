@@ -4,6 +4,7 @@ import { JoystickControls } from '@/components/features/JoystickControls';
 import { ActivityLog } from '@/components/features/ActivityLog';
 import type { CameraSource } from '@/lib/cameraSource';
 import type { ActivityLogItem } from '@/data/types';
+import { useSystemState } from '@/store/useSystemState';
 
 interface ManualModeSectionProps {
   streamSource: CameraSource;
@@ -11,6 +12,7 @@ interface ManualModeSectionProps {
   frequency: number;
   amplitude: number;
   duration: number;
+  isAudioPlaying?: boolean;
   setWaveform: (w: string) => void;
   setFrequency: (f: number) => void;
   setAmplitude: (a: number) => void;
@@ -28,6 +30,7 @@ export function ManualModeSection({
   frequency,
   amplitude,
   duration,
+  isAudioPlaying = false,
   setWaveform,
   setFrequency,
   setAmplitude,
@@ -39,49 +42,65 @@ export function ManualModeSection({
   onExport,
 }: ManualModeSectionProps) {
   return (
-    <div className="flex flex-col gap-4">
-      {/* Title Header */}
-      <h2 className="text-center font-mono text-xs font-black tracking-widest text-danger-soft uppercase">
-        MANUAL CONTROLS ACTIVE
-      </h2>
+    <div
+      className="flex flex-col gap-2.5 lg:grid lg:grid-cols-12 lg:gap-4 items-start"
+      onPointerDownCapture={() => useSystemState.getState().pingActivity()}
+    >
+      {/* Kolom Kiri / Utama (Kamera & Log) - seperti .main di static/index.html */}
+      <div className="flex flex-col gap-2.5 w-full lg:col-span-7">
+        <VideoPanel isOff={false} cameraVisible={true} source={streamSource} />
 
-      {/* Camera Panel */}
-      <VideoPanel isOff={false} cameraVisible={true} source={streamSource} />
-
-      <div className="flex flex-row gap-3 min-h-[286px] w-full">
-        {/* Interactive Sensor Panel */}
-        <SensorPanel
-          waveform={waveform}
-          frequency={frequency}
-          amplitude={amplitude}
-          duration={duration}
-          isOff={false}
-          isManual={true}
-          setWaveform={setWaveform}
-          setFrequency={setFrequency}
-          setAmplitude={setAmplitude}
-          setDuration={setDuration}
-        />
-        
-        {/* Joystick Controls */}
-        <JoystickControls
-          isOff={false}
-          isStarting={false}
-          isManual={true}
-          frequency={frequency}
-          onAuthorize={() => true}
-          onShoot={onShoot}
-        />
+        <div className="hidden lg:block">
+          <ActivityLog
+            logs={activityLogs}
+            isOff={false}
+            logsReady={logsReady}
+            isExporting={isExporting}
+            onExport={onExport}
+          />
+        </div>
       </div>
 
-      {/* Activity Log */}
-      <ActivityLog
-        logs={activityLogs}
-        isOff={false}
-        logsReady={logsReady}
-        isExporting={isExporting}
-        onExport={onExport}
-      />
+      {/* Kolom Kanan / Side (Sensor & Joystick) - seperti .side di static/index.html */}
+      <div className="flex flex-col gap-2.5 w-full lg:col-span-5">
+        <div className="flex flex-row gap-2.5 min-h-[286px] w-full">
+          {/* Interactive Sensor Panel */}
+          <SensorPanel
+            waveform={waveform}
+            frequency={frequency}
+            amplitude={amplitude}
+            duration={duration}
+            isOff={false}
+            isManual={true}
+            setWaveform={setWaveform}
+            setFrequency={setFrequency}
+            setAmplitude={setAmplitude}
+            setDuration={setDuration}
+          />
+          
+          {/* Joystick Controls */}
+          <JoystickControls
+            isOff={false}
+            isStarting={false}
+            isManual={true}
+            isAudioPlaying={isAudioPlaying}
+            frequency={frequency}
+            onAuthorize={() => true}
+            onShoot={onShoot}
+          />
+        </div>
+
+        {/* Tampilan mobile untuk Activity Log */}
+        <div className="block lg:hidden">
+          <ActivityLog
+            logs={activityLogs}
+            isOff={false}
+            logsReady={logsReady}
+            isExporting={isExporting}
+            onExport={onExport}
+          />
+        </div>
+      </div>
     </div>
   );
 }

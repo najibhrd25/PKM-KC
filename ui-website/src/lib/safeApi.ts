@@ -8,8 +8,14 @@ import type { JoystickPosition } from '@/data/types';
 // Wi-Fi yang sama.
 // ============================================================================
 
-export const RASPBERRY_PI_IP = '10.7.101.64'; // Ganti dengan IP Pi Anda
-const BASE_URL = `http://${RASPBERRY_PI_IP}:8000`;
+export const RASPBERRY_PI_IP = '10.7.101.142'; // IP Pi lokal
+// Otomatis pilih: jika buka di localhost/jaringan lokal pakai IP lokal, jika di Vercel pakai tunnel
+const isLocalhost = typeof window !== 'undefined' && 
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.startsWith('10.') || window.location.hostname.startsWith('192.168.'));
+
+export const BASE_URL = isLocalhost
+  ? `http://${RASPBERRY_PI_IP}:8000`
+  : 'https://safe1.abedtgr.my.id';
 
 // Timeout default untuk setiap request (ms)
 const REQUEST_TIMEOUT = 5000;
@@ -93,11 +99,12 @@ export async function setSafeMode(payload: SetModePayload): Promise<ApiResponse>
  * Koordinat joystick (x, y dalam piksel) dikonversi menjadi delta derajat.
  * Sensitivitas diatur oleh JOG_SENSITIVITY.
  */
-const JOG_SENSITIVITY = 0.15;
+const JOG_STEP_DEG = 3.0; // Sesuai LIMITS.jog_step_deg di web asli (static/index.html)
 
 export async function sendServoPosition(position: JoystickPosition): Promise<ApiResponse> {
-  const d_yaw = position.x * JOG_SENSITIVITY;
-  const d_pitch = -position.y * JOG_SENSITIVITY; // Inversi Y: atas = pitch naik
+  // position.x & position.y sudah dinormalisasi -1..+1
+  const d_yaw = (position.x / 38) * JOG_STEP_DEG;
+  const d_pitch = -(position.y / 38) * JOG_STEP_DEG; // Dibalik agar geser ke atas = naik ke atas, ke bawah = turun ke bawah
 
   return safeFetch(`${BASE_URL}/cmd/jog`, {
     method: 'POST',
@@ -107,36 +114,65 @@ export async function sendServoPosition(position: JoystickPosition): Promise<Api
 }
 
 /**
- * 3. SHOOT — Menembakkan gelombang akustik secara manual
+ * 3. AUDIO CMD — Mengontrol pemancaran gelombang akustik
  *
- * Endpoint Pi: POST /cmd/shoot
- * Payload:     { frequency: number, amplitude?: number, duration?: number }
+ * Endpoint Pi: POST /cmd/audio
+ * Payload:     { action: "play", freq: number, amplitude?: number, duration?: number, waveform?: string }
  */
 export async function triggerAcousticPulse(payload: TriggerPayload): Promise<ApiResponse> {
-  return safeFetch(`${BASE_URL}/cmd/shoot`, {
+  return safeFetch(`${BASE_URL}/cmd/audio`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      frequency: payload.frequency,
+      action: 'play',
+      freq: payload.frequency,
       amplitude: payload.amplitude,
       duration: payload.duration,
-      waveform: payload.waveform
+      waveform: payload.waveform,
     }),
   });
 }
 
 /**
- * SERVO HOME — Mengembalikan servo ke titik tengah
+ * STOP AUDIO — Menghentikan pemancaran gelombang akustik segera
+ *
+ * Endpoint Pi: POST /cmd/audio
+ * Payload:     { action: "stop" }
  */
-export async function homeServo(): Promise<ApiResponse> {
-  return safeFetch(`${BASE_URL}/cmd/home`, { method: 'POST' });
+export async function stopAudio(): Promise<ApiResponse> {
+  return safeFetch(`${BASE_URL}/cmd/audio`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'stop' }),
+  });
 }
 
 /**
- * STOP ACTUATORS — Menghentikan audio dan tracking, mengembalikan servo ke home
+ * SERVO HOME — Mengembalikan servo ke titik tengah (center)
+ *
+ * Endpoint Pi: POST /cmd/servo
+ * Payload:     { action: "home" }
+ */
+export async function homeServo(): Promise<ApiResponse> {
+  return safeFetch(`${BASE_URL}/cmd/servo`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'home' }),
+  });
+}
+
+/**
+ * SERVO STOP (TORQUE OFF) — Mematikan torsi servo untuk keamanan
+ *
+ * Endpoint Pi: POST /cmd/servo
+ * Payload:     { action: "torque_off" }
  */
 export async function stopServo(): Promise<ApiResponse> {
-  return safeFetch(`${BASE_URL}/cmd/stop`, { method: 'POST' });
+  return safeFetch(`${BASE_URL}/cmd/servo`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'torque_off' }),
+  });
 }
 
 /**

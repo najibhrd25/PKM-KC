@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { ActivityLogItem } from '@/data/types';
 
 import {
+  INITIAL_ACTIVITY_LOGS,
   LIVE_SENSOR_SNAPSHOT,
   MANUAL_MODE_PASSWORD,
   STARTUP_TIMELINE_MS,
@@ -32,12 +33,14 @@ function clearTimers() {
 interface SystemStore {
   state: SystemState;
   isManual: boolean;
+  isPiConnected: boolean;
   startupPhase: StartupPhase;
   temperature: number;
   waveform: string;
   frequency: number;
   amplitude: number;
   duration: number;
+  isAudioPlaying: boolean;
   activityLogs: ActivityLogItem[];
   setWaveform: (w: string) => void;
   setFrequency: (f: number) => void;
@@ -60,13 +63,15 @@ let lastHeartbeatTime = 0;
 export const useSystemState = create<SystemStore>()((set, get) => ({
   state: 'AUTO_MODE',
   isManual: false,
+  isPiConnected: false,
   startupPhase: { ...initialStartupPhase, logsInitialized: true, cameraVisible: true, numbersRolled: true, filterRemoved: true, audioPlayed: true },
   temperature: 0,
   waveform: 'sine',
   frequency: 45,
   amplitude: 0.855,
   duration: 30,
-  activityLogs: [],
+  isAudioPlaying: false,
+  activityLogs: INITIAL_ACTIVITY_LOGS,
 
   setWaveform: (w) => { set({ waveform: w }); get().pingActivity(); },
   setFrequency: (f) => { set({ frequency: f }); get().pingActivity(); },
@@ -94,7 +99,7 @@ export const useSystemState = create<SystemStore>()((set, get) => ({
     const { state, _initSSE } = get();
     if (state !== 'OFF_STATE') return;
 
-    set({ state: 'STARTUP_SEQUENCE', activityLogs: [] });
+    set({ state: 'STARTUP_SEQUENCE', activityLogs: INITIAL_ACTIVITY_LOGS });
     _initSSE();
     get()._runStartupSequence();
   },
@@ -114,19 +119,14 @@ export const useSystemState = create<SystemStore>()((set, get) => ({
       frequency: 45,
       amplitude: 0.855,
       duration: 30,
-      activityLogs: [],
+      activityLogs: INITIAL_ACTIVITY_LOGS,
     });
   },
 
   activateManual: () => {
-    const { state } = get();
-    if (state !== 'AUTO_MODE') return;
-
     // Kirim perintah ke Pi untuk masuk mode manual
     setSafeMode({ auto: false }).catch((err) => {
       console.warn('[System] Gagal mengirim mode manual ke Pi:', err);
-      // Tetap lanjut ke manual di sisi UI meski request gagal
-      // (saat development tanpa Pi terhubung)
     });
 
     set({
@@ -134,14 +134,16 @@ export const useSystemState = create<SystemStore>()((set, get) => ({
       isManual: true,
     });
 
-    // Start inactivity timer and send first heartbeat
-    get().pingActivity();
+    // Kirim heartbeat pertama & jalankan interval heartbeat tiap 2 detik
+    sendHeartbeat().catch(() => {});
+    lastHeartbeatTime = Date.now();
+    if (heartbeatInterval) clearInterval(heartbeatInterval);
+    heartbeatInterval = setInterval(() => {
+      sendHeartbeat().catch(() => {});
+    }, HEARTBEAT_INTERVAL_MS);
   },
 
   deactivateManual: () => {
-    const { state } = get();
-    if (state !== 'MANUAL_MODE') return;
-
     if (heartbeatInterval) clearInterval(heartbeatInterval);
     if (inactivityTimer) clearTimeout(inactivityTimer);
     heartbeatInterval = null;
@@ -222,8 +224,18 @@ export const useSystemState = create<SystemStore>()((set, get) => ({
   _initSSE: () => {
     get()._closeSSE();
     eventSource = new EventSource(getEventsUrl());
+
+    eventSource.onopen = () => {
+      set({ isPiConnected: true });
+    };
+
+    eventSource.onerror = () => {
+      set({ isPiConnected: false });
+    };
+
     eventSource.onmessage = (e) => {
       try {
+        set({ isPiConnected: true });
         const d = JSON.parse(e.data);
         const timeStr = new Date().toLocaleTimeString('en-US', { hour12: false });
         
@@ -248,6 +260,17 @@ export const useSystemState = create<SystemStore>()((set, get) => ({
             detail: `Switched to ${d.value.toUpperCase()} mode`,
             tone: 'info'
           };
+        } else if (d.type === 'audio') {
+          set({ isAudioPlaying: !!d.playing });
+          if (d.playing) {
+            logItem = {
+              id: Date.now().toString() + Math.random(),
+              time: timeStr,
+              title: 'AUDIO ACTIVE',
+              detail: `Memancarkan gelombang ${d.freq} Hz ${d.waveform}`,
+              tone: 'danger'
+            };
+          }
         } else if (d.type === 'detection') {
           logItem = {
             id: Date.now().toString() + Math.random(),
@@ -273,5 +296,6 @@ export const useSystemState = create<SystemStore>()((set, get) => ({
       eventSource.close();
       eventSource = null;
     }
+    set({ isPiConnected: false });
   }
 }));

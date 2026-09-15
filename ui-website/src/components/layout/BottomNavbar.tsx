@@ -6,73 +6,69 @@ interface BottomNavbarProps {
 }
 
 export function BottomNavbar({ currentTab, onTabChange }: BottomNavbarProps) {
-  const indicatorStyle = {
+  // Posisi horizontal sliding indicator (33.333% per tab)
+  const indicatorPosition = {
     auto: 'left-0',
-    manual: 'left-[116px]',
-    analisis: 'left-[232px]',
+    manual: 'left-1/3',
+    analisis: 'left-2/3',
   }[currentTab];
 
   return (
-    <>
-      <style>{`
-        .liquid-glass {
-          background: rgba(10, 10, 15, 0.75); 
-          backdrop-filter: blur(12px);
-          -webkit-backdrop-filter: blur(12px);
-          box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.08);
-        }
-
-        .liquid-glass::before {
-          content: "";
-          position: absolute;
-          inset: 0;
-          padding: 1.4px; 
-          border-radius: inherit;
-          background: linear-gradient(180deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 100%);
-          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-          -webkit-mask-composite: xor;
-          mask-composite: exclude;
-          pointer-events: none; 
-        }
-      `}</style>
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-full liquid-glass p-1.5 w-[360px]">
-        <div className="relative flex h-11 w-full flex-row items-center justify-between">
-          {/* Animated active sliding pill */}
-          <div
-            className={`absolute top-0 bottom-0 w-[116px] rounded-full bg-danger/20 transition-all duration-300 ease-out ${indicatorStyle}`}
-          />
-
-          <button
-            onClick={() => onTabChange('auto')}
-            className={`z-10 flex w-[116px] h-full flex-col items-center justify-center gap-0.5 transition-colors ${
-              currentTab === 'auto' ? 'text-danger-soft font-bold' : 'text-muted hover:text-foreground'
+    <div className="fixed bottom-0 inset-x-0 z-50 w-full border-t border-border/40 bg-surface/95 backdrop-blur-xl shadow-2xl pb-safe">
+      <div className="relative mx-auto flex h-14 w-full max-w-md flex-row items-center justify-between px-0 py-1">
+        {/* Animated active sliding container */}
+        <div
+          className={`absolute top-1 bottom-1 w-1/3 transition-all duration-300 ease-out ${indicatorPosition} ${currentTab === 'auto'
+              ? 'rounded-r-full rounded-l-none bg-danger/20 border-r border-y border-danger/35'
+              : currentTab === 'analisis'
+                ? 'rounded-l-full rounded-r-none bg-danger/20 border-l border-y border-danger/35'
+                : 'px-2'
             }`}
-          >
-            <Shield className="h-4.5 w-4.5" />
-            <span className="font-mono text-[9px] tracking-wider">OTOMATIS</span>
-          </button>
-
-          <button
-            onClick={() => onTabChange('manual')}
-            className={`z-10 flex w-[116px] h-full flex-col items-center justify-center gap-0.5 transition-colors ${
-              currentTab === 'manual' ? 'text-danger-soft font-bold' : 'text-muted hover:text-foreground'
-            }`}
-          >
-            <Gamepad2 className="h-4.5 w-4.5" />
-            <span className="font-mono text-[9px] tracking-wider">MANUAL</span>
-          </button>
-
-          <button
-            onClick={() => onTabChange('analisis')}
-            className={`z-10 flex w-[116px] h-full flex-col items-center justify-center gap-0.5 transition-colors ${
-              currentTab === 'analisis' ? 'text-danger-soft font-bold' : 'text-muted hover:text-foreground'
-            }`}
-          >
-            <LineChart className="h-4.5 w-4.5" />
-            <span className="font-mono text-[9px] tracking-wider">ANALISIS</span>
-          </button>
+        >
+          {currentTab === 'manual' && (
+            <div className="w-full h-full rounded-full bg-danger/20 border border-danger/35" />
+          )}
         </div>
+
+        {/* Tab 1: Otomatis */}
+        <button
+          type="button"
+          onClick={() => onTabChange('auto')}
+          className={`z-10 flex w-1/3 h-full flex-col items-center justify-center gap-0.5 transition-colors ${currentTab === 'auto'
+              ? 'text-danger-soft font-bold'
+              : 'text-muted hover:text-foreground font-medium'
+            }`}
+        >
+          <Shield className="h-5 w-5" />
+          <span className="font-mono text-[9px] tracking-wider">OTOMATIS</span>
+        </button>
+
+        {/* Tab 2: Manual */}
+        <button
+          type="button"
+          onClick={() => onTabChange('manual')}
+          className={`z-10 flex w-1/3 h-full flex-col items-center justify-center gap-0.5 transition-colors ${currentTab === 'manual'
+              ? 'text-danger-soft font-bold'
+              : 'text-muted hover:text-foreground font-medium'
+            }`}
+        >
+          <Gamepad2 className="h-5 w-5" />
+          <span className="font-mono text-[9px] tracking-wider">MANUAL</span>
+        </button>
+
+        {/* Tab 3: Analisis */}
+        <button
+          type="button"
+          onClick={() => onTabChange('analisis')}
+          className={`z-10 flex w-1/3 h-full flex-col items-center justify-center gap-0.5 transition-colors ${currentTab === 'analisis'
+              ? 'text-danger-soft font-bold'
+              : 'text-muted hover:text-foreground font-medium'
+            }`}
+        >
+          <LineChart className="h-5 w-5" />
+          <span className="font-mono text-[9px] tracking-wider">ANALISIS</span>
+        </button>
       </div>
-    </>
+    </div>
   );
 }

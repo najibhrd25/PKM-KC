@@ -1,7 +1,8 @@
-import type { CameraSource } from '@/lib/cameraSource';
 import { getCameraStreamUrl } from '@/lib/safeApi';
+import type { CameraSource } from '@/lib/cameraSource';
 import { Card } from '@/components/ui/Card';
-import { StatusPill } from '@/components/ui/StatusPill';
+import { useState } from 'react';
+// import { useEffect, useRef } from 'react'; // [AKTIFKAN JIKA PAKAI VIDEO]
 
 interface VideoPanelProps {
   isOff: boolean;
@@ -9,47 +10,50 @@ interface VideoPanelProps {
   source: CameraSource;
 }
 
-export function VideoPanel({ isOff, cameraVisible, source }: VideoPanelProps) {
-  // Tentukan URL stream berdasarkan jenis sumber kamera
-  const isLiveStream = source.kind === 'raspberry-pi-stream' || (cameraVisible && !isOff);
-  const streamUrl = source.streamUrl ?? getCameraStreamUrl();
+// [KODE OPSI VIDEO] - Aktifkan jika ingin memakai video looping:
+// const START_TIME = 0.9888; // Detik mulai video (misal 55 detik atau awal)
+
+export function VideoPanel({ isOff }: VideoPanelProps) {
+  const [streamError, setStreamError] = useState(false);
+  const streamUrl = getCameraStreamUrl();
 
   return (
     <Card
-      className={`relative aspect-square overflow-hidden ${
+      className={`relative w-full aspect-[16/10.5] max-h-[235px] overflow-hidden bg-black ${
         isOff ? 'opacity-[0.45]' : ''
       }`}
     >
-      <div
-        className={`absolute inset-0 bg-[#050505] ${
-          cameraVisible && !isOff ? 'opacity-[0.72]' : 'opacity-20'
-        }`}
-      >
-        {/* Live MJPEG stream dari Raspberry Pi */}
-        {isLiveStream && (
+      <div className="absolute inset-0 overflow-hidden flex items-center justify-center bg-black">
+        {/* Stream langsung dari Raspberry Pi */}
+        {!streamError ? (
           <img
             src={streamUrl}
-            alt="Live camera stream"
-            className="absolute inset-0 h-full w-full object-cover"
+            alt="Live Camera Feed Raspberry Pi"
+            onError={() => setStreamError(true)}
+            onLoad={() => setStreamError(false)}
+            className="h-full w-full object-cover object-center"
           />
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-2 p-4 text-center">
+            <div className="h-2.5 w-2.5 rounded-full bg-red-500/80 animate-pulse" />
+            <span className="font-mono text-[11px] font-bold tracking-wider text-muted uppercase">
+              Kamera Raspberry Pi Offline
+            </span>
+            <span className="font-mono text-[9px] text-muted/60">
+              {streamUrl}
+            </span>
+            <button
+              type="button"
+              onClick={() => setStreamError(false)}
+              className="mt-1 px-3 py-1 text-[10px] font-mono font-bold rounded border border-border bg-surface-high hover:border-danger-soft transition-colors cursor-pointer text-foreground"
+            >
+              Coba Hubungkan Ulang
+            </button>
+          </div>
         )}
-
-        {/* Overlay efek warna */}
-        <div className="absolute inset-0 bg-danger/[0.035]" />
-      </div>
-
-      <div className="absolute left-4 top-4">
-        <StatusPill label={isOff ? 'OFFLINE' : 'LIVE'} tone={isOff ? 'idle' : 'danger'} />
-      </div>
-
-      <div className="absolute inset-x-0 bottom-0 flex flex-row items-center justify-between bg-surface/90 px-4 py-3">
-        <span className="font-mono text-[10px] tracking-wider text-muted">
-          {source.label}
-        </span>
-        <span className="font-mono text-[10px] font-extrabold tracking-wider text-foreground">
-          {source.kind.toUpperCase()}
-        </span>
       </div>
     </Card>
   );
 }
+
+

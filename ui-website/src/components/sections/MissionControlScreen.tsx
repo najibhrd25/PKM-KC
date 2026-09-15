@@ -7,7 +7,7 @@ import { ManualModeSection } from '@/components/sections/ManualModeSection';
 import { RiwayatSection } from '@/components/sections/RiwayatSection';
 import { createRaspberryPiCameraSource } from '@/lib/cameraSource';
 import { shareActivityReport } from '@/lib/activityReport';
-import { triggerAcousticPulse, getCameraStreamUrl, homeServo, stopServo } from '@/lib/safeApi';
+import { triggerAcousticPulse, stopAudio, getCameraStreamUrl, homeServo, stopServo } from '@/lib/safeApi';
 import { useSystemState } from '@/store/useSystemState';
 
 export function MissionControlScreen() {
@@ -21,6 +21,8 @@ export function MissionControlScreen() {
     duration,
     activityLogs,
     isManual,
+    isAudioPlaying,
+    isPiConnected,
     startupPhase,
     state,
     temperature,
@@ -62,7 +64,11 @@ export function MissionControlScreen() {
   }
 
   function handleShoot() {
-    triggerAcousticPulse({ action: 'shoot', waveform, frequency, amplitude, duration }).catch(() => {});
+    if (isAudioPlaying) {
+      stopAudio().catch(() => {});
+    } else {
+      triggerAcousticPulse({ action: 'shoot', waveform, frequency, amplitude, duration }).catch(() => {});
+    }
   }
 
   function handleTabChange(tab: 'auto' | 'manual' | 'analisis') {
@@ -82,6 +88,7 @@ export function MissionControlScreen() {
         logs: activityLogs,
         state,
         temperature,
+        isPiConnected,
       });
     } catch {
       alert('Export failed: The PDF report could not be created.');
@@ -92,14 +99,32 @@ export function MissionControlScreen() {
 
   return (
     <div className="flex min-h-dvh w-full flex-1 flex-col bg-background">
-      <Header state={state} isManual={isManual} onPowerPress={handlePowerPress} onHomePress={handleHomePress} />
+      <Header
+        state={state}
+        isManual={isManual}
+        isPiConnected={isPiConnected}
+        onPowerPress={handlePowerPress}
+        onHomePress={handleHomePress}
+      />
 
-      <div className="flex w-full flex-1 flex-col gap-4 overflow-y-auto px-4 pb-36">
-        <div className="flex flex-col gap-1 pt-2">
-          <span className="font-mono text-[10px] tracking-[2.4px] text-muted">
-            {activeTab === 'manual' ? 'MANUAL CONTROL ACTIVE' : activeTab === 'analisis' ? 'SYSTEM DIAGNOSTICS' : 'ACTIVE MONITORING'}
+      <div className="flex w-full flex-1 flex-col gap-3 overflow-y-auto px-4 pb-20 max-w-6xl mx-auto">
+        <div className="flex flex-col gap-0.5 pt-1">
+          <span
+            className={`font-mono text-[9px] font-bold tracking-[2px] ${
+              activeTab === 'auto'
+                ? 'text-success'
+                : activeTab === 'manual'
+                ? 'text-danger-soft'
+                : 'text-info'
+            }`}
+          >
+            {activeTab === 'manual'
+              ? 'MANUAL CONTROL ACTIVE'
+              : activeTab === 'analisis'
+              ? 'SYSTEM DIAGNOSTICS'
+              : 'AUTOMATIC MONITORING ACTIVE'}
           </span>
-          <h1 className="text-[30px] font-black tracking-[-1px] text-foreground">
+          <h1 className="text-[22px] font-black tracking-tight text-foreground leading-tight">
             MISSION CONTROL
           </h1>
         </div>
@@ -111,6 +136,7 @@ export function MissionControlScreen() {
             frequency={frequency}
             amplitude={amplitude}
             duration={duration}
+            isAudioPlaying={isAudioPlaying}
             setWaveform={setWaveform}
             setFrequency={setFrequency}
             setAmplitude={setAmplitude}
@@ -141,6 +167,7 @@ export function MissionControlScreen() {
           <RiwayatSection
             temperature={temperature}
             activityLogsCount={activityLogs.length}
+            isPiConnected={isPiConnected}
           />
         )}
       </div>

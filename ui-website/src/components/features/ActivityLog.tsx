@@ -21,18 +21,18 @@ export function ActivityLog({
   const reportDisabled = isOff || !logsReady || isExporting;
 
   return (
-    <Card className="p-4">
-      <div className="mb-4 flex flex-row items-center justify-between">
-        <span className="text-lg font-black tracking-[0.5px] text-foreground">
+    <Card className="p-3.5">
+      <div className="mb-2.5 flex flex-row items-center justify-between">
+        <span className="text-base font-black tracking-[0.5px] text-foreground">
           LOG KEJADIAN
         </span>
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex flex-col items-end gap-1">
           <span className="font-mono text-[9px] tracking-wider text-muted">
             {isOff ? 'OFFLINE' : 'REAL-TIME SYNC'}
           </span>
           <button
             type="button"
-            className={`border border-border px-3 py-2 transition-opacity active:opacity-70 ${
+            className={`border border-border px-2.5 py-1.5 transition-opacity active:opacity-70 ${
               reportDisabled ? 'pointer-events-none opacity-[0.35]' : 'cursor-pointer bg-surface'
             }`}
             disabled={reportDisabled}
@@ -51,16 +51,18 @@ export function ActivityLog({
         </p>
       ) : (
         logs.map((log) => (
-          <div key={log.id} className="flex flex-row gap-3 py-2">
-            <span className="w-[58px] font-mono text-[10px] text-muted">{log.time}</span>
+          <div key={log.id} className="flex flex-row gap-3 py-2 border-b border-border/20 last:border-0">
+            <span className="shrink-0 w-[60px] font-mono text-[10px] text-muted">{log.time}</span>
             <div className="flex-1">
               <p
                 className={`font-mono text-[11px] font-black tracking-wider ${
                   log.tone === 'danger'
                     ? 'text-danger-soft'
-                    : log.tone === 'success'
-                      ? 'text-success'
-                      : 'text-foreground'
+                    : log.tone === 'warning'
+                      ? 'text-amber-400'
+                      : log.tone === 'success'
+                        ? 'text-success'
+                        : 'text-foreground'
                 }`}
               >
                 {log.title}

@@ -41,9 +41,8 @@ export function AuthModal({ visible, onClose, onSubmit }: AuthModalProps) {
           AUTHORIZATION REQUIRED
         </p>
         <p
-          className={`mb-4 mt-2 text-center font-mono text-[10px] tracking-[1.4px] ${
-            error ? 'text-danger-soft' : 'text-muted'
-          }`}
+          className={`mb-4 mt-2 text-center font-mono text-[10px] tracking-[1.4px] ${error ? 'text-danger-soft' : 'text-muted'
+            }`}
         >
           {error ? 'ACCESS DENIED' : 'Enter maintenance password'}
         </p>
@@ -51,9 +50,8 @@ export function AuthModal({ visible, onClose, onSubmit }: AuthModalProps) {
         <input
           type="password"
           autoComplete="off"
-          className={`mb-4 w-full border bg-transparent px-4 py-3 text-center font-mono text-base uppercase tracking-[2px] text-foreground outline-none placeholder:text-muted ${
-            error ? 'border-danger' : 'border-border'
-          }`}
+          className={`mb-4 w-full border bg-transparent px-4 py-3 text-center font-mono text-base uppercase tracking-[2px] text-foreground outline-none placeholder:text-muted ${error ? 'border-danger' : 'border-border'
+            }`}
           placeholder="PASSWORD"
           value={password}
           onChange={(e) => {
