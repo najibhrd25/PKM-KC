@@ -43,47 +43,64 @@ export function ManualModeSection({
 }: ManualModeSectionProps) {
   return (
     <div
-      className="flex flex-col gap-2.5"
+      className="flex flex-col gap-2.5 lg:grid lg:grid-cols-12 lg:gap-4 items-start"
       onPointerDownCapture={() => useSystemState.getState().pingActivity()}
     >
-      {/* Camera Panel */}
-      <VideoPanel isOff={false} cameraVisible={true} source={streamSource} />
+      {/* Kolom Kiri / Utama (Kamera & Log) - seperti .main di static/index.html */}
+      <div className="flex flex-col gap-2.5 w-full lg:col-span-7">
+        <VideoPanel isOff={false} cameraVisible={true} source={streamSource} />
 
-      <div className="flex flex-row gap-2.5 min-h-[286px] w-full">
-        {/* Interactive Sensor Panel */}
-        <SensorPanel
-          waveform={waveform}
-          frequency={frequency}
-          amplitude={amplitude}
-          duration={duration}
-          isOff={false}
-          isManual={true}
-          setWaveform={setWaveform}
-          setFrequency={setFrequency}
-          setAmplitude={setAmplitude}
-          setDuration={setDuration}
-        />
-        
-        {/* Joystick Controls */}
-        <JoystickControls
-          isOff={false}
-          isStarting={false}
-          isManual={true}
-          isAudioPlaying={isAudioPlaying}
-          frequency={frequency}
-          onAuthorize={() => true}
-          onShoot={onShoot}
-        />
+        <div className="hidden lg:block">
+          <ActivityLog
+            logs={activityLogs}
+            isOff={false}
+            logsReady={logsReady}
+            isExporting={isExporting}
+            onExport={onExport}
+          />
+        </div>
       </div>
 
-      {/* Activity Log */}
-      <ActivityLog
-        logs={activityLogs}
-        isOff={false}
-        logsReady={logsReady}
-        isExporting={isExporting}
-        onExport={onExport}
-      />
+      {/* Kolom Kanan / Side (Sensor & Joystick) - seperti .side di static/index.html */}
+      <div className="flex flex-col gap-2.5 w-full lg:col-span-5">
+        <div className="flex flex-row gap-2.5 min-h-[286px] w-full">
+          {/* Interactive Sensor Panel */}
+          <SensorPanel
+            waveform={waveform}
+            frequency={frequency}
+            amplitude={amplitude}
+            duration={duration}
+            isOff={false}
+            isManual={true}
+            setWaveform={setWaveform}
+            setFrequency={setFrequency}
+            setAmplitude={setAmplitude}
+            setDuration={setDuration}
+          />
+          
+          {/* Joystick Controls */}
+          <JoystickControls
+            isOff={false}
+            isStarting={false}
+            isManual={true}
+            isAudioPlaying={isAudioPlaying}
+            frequency={frequency}
+            onAuthorize={() => true}
+            onShoot={onShoot}
+          />
+        </div>
+
+        {/* Tampilan mobile untuk Activity Log */}
+        <div className="block lg:hidden">
+          <ActivityLog
+            logs={activityLogs}
+            isOff={false}
+            logsReady={logsReady}
+            isExporting={isExporting}
+            onExport={onExport}
+          />
+        </div>
+      </div>
     </div>
   );
 }

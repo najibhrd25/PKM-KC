@@ -186,39 +186,39 @@ const MONTHLY_RECORDS: MonthData[] = [
     id: 'september',
     name: 'September',
     year: '2026',
-    totalTests: 6,
-    successRate: '100%',
-    avgDuration: '5.4s',
+    totalTests: 4,
+    successRate: '75%',
+    avgDuration: '7.8s',
     records: [
       {
         id: 'sep-3',
-        date: '18 Sep',
-        time: '15:40',
-        title: 'Demonstrasi Monitoring Web',
+        date: '06 Sep',
+        time: '09:48',
+        title: 'Uji Toleransi Api Tidak Padam (Alarm)',
         freq: '45 Hz',
-        duration: '5.2s',
-        status: 'success',
-        notes: 'Sinkronisasi telemetri dashboard responsif.',
+        duration: '60.0s',
+        status: 'failed',
+        notes: '2x percobaan pemadaman gagal memadamkan api. Notifikasi darurat dan alarm evakuasi terkirim ke Telegram.',
       },
       {
         id: 'sep-2',
-        date: '10 Sep',
-        time: '13:12',
-        title: 'Efisiensi Daya Gelombang',
+        date: '05 Sep',
+        time: '14:15',
+        title: 'Validasi Deteksi & Pemadaman Cepat',
         freq: '45 Hz',
-        duration: '5.4s',
+        duration: '10.0s',
         status: 'success',
-        notes: 'Daya stabil dengan hasil pemadaman optimal.',
+        notes: 'Confidence score 93.4%, api padam total dalam 10 detik. Laporan sukses terkirim ke Telegram.',
       },
       {
         id: 'sep-1',
         date: '04 Sep',
         time: '10:00',
-        title: 'Uji Stabilitas Termal',
+        title: 'Uji Stabilitas Termal & Telemetri',
         freq: '45 Hz',
         duration: '5.6s',
         status: 'success',
-        notes: 'Suhu Raspberry Pi & amplifier aman di 39.2°C.',
+        notes: 'Suhu Raspberry Pi & amplifier stabil di 39.2°C.',
       },
     ],
   },
@@ -227,11 +227,13 @@ const MONTHLY_RECORDS: MonthData[] = [
 interface RiwayatSectionProps {
   temperature: number;
   activityLogsCount: number;
+  isPiConnected?: boolean;
 }
 
 export function RiwayatSection({
   temperature,
   activityLogsCount,
+  isPiConnected = false,
 }: RiwayatSectionProps) {
   const [activeModalMonthId, setActiveModalMonthId] = useState<string | null>(null);
 
@@ -242,125 +244,139 @@ export function RiwayatSection({
 
   return (
     <div className="flex flex-col gap-3 pb-8">
-      {/* 1. HARDWARE HEALTH & TELEMETRY */}
-      <Card className="p-3.5 flex flex-col gap-3">
-        <div className="flex flex-row items-center justify-between border-b border-border/40 pb-2">
-          <div className="flex flex-row items-center gap-2">
-            <Cpu className="h-4 w-4 text-danger-soft" />
-            <span className="font-mono text-[12px] font-black tracking-wider text-foreground">
-              HARDWARE TELEMETRY
-            </span>
-          </div>
-          <StatusPill label="ONLINE" tone="active" isPulsing={true} />
-        </div>
-
-        <div className="grid grid-cols-2 gap-2.5">
-          {/* Suhu CPU */}
-          <div className="flex flex-col justify-center rounded-lg border border-border/40 bg-surface-low/30 p-2.5">
-            <span className="font-mono text-[10px] font-bold text-muted uppercase tracking-wider">
-              CPU Temp
-            </span>
-            <div className="flex flex-row items-baseline gap-1 mt-0.5">
-              <span className="font-mono text-[22px] font-black text-foreground">
-                {cpuTemp.toFixed(1)}
-              </span>
-              <span className="font-mono text-[12px] font-bold text-muted">°C</span>
+      {/* 1. HARDWARE HEALTH & TELEMETRY (Hanya jika Raspberry Pi menyala & terhubung) */}
+      {isPiConnected ? (
+        <>
+          <Card className="p-3.5 flex flex-col gap-3">
+            <div className="flex flex-row items-center justify-between border-b border-border/40 pb-2">
+              <div className="flex flex-row items-center gap-2">
+                <Cpu className="h-4 w-4 text-danger-soft" />
+                <span className="font-mono text-[12px] font-black tracking-wider text-foreground">
+                  HARDWARE TELEMETRY
+                </span>
+              </div>
+              <StatusPill label="ONLINE" tone="active" isPulsing={true} />
             </div>
-          </div>
 
-          {/* Ping Latency */}
-          <div className="flex flex-col justify-center rounded-lg border border-border/40 bg-surface-low/30 p-2.5">
-            <span className="font-mono text-[10px] font-bold text-muted uppercase tracking-wider">
-              Latency
-            </span>
-            <div className="flex flex-row items-baseline gap-1 mt-0.5">
-              <span className="font-mono text-[22px] font-black text-foreground">
-                {ping}
-              </span>
-              <span className="font-mono text-[12px] font-bold text-muted">ms</span>
+            <div className="grid grid-cols-2 gap-2.5">
+              {/* Suhu CPU */}
+              <div className="flex flex-col justify-center rounded-lg border border-border/40 bg-surface-low/30 p-2.5">
+                <span className="font-mono text-[10px] font-bold text-muted uppercase tracking-wider">
+                  CPU Temp
+                </span>
+                <div className="flex flex-row items-baseline gap-1 mt-0.5">
+                  <span className="font-mono text-[22px] font-black text-foreground">
+                    {cpuTemp.toFixed(1)}
+                  </span>
+                  <span className="font-mono text-[12px] font-bold text-muted">°C</span>
+                </div>
+              </div>
+
+              {/* Ping Latency */}
+              <div className="flex flex-col justify-center rounded-lg border border-border/40 bg-surface-low/30 p-2.5">
+                <span className="font-mono text-[10px] font-bold text-muted uppercase tracking-wider">
+                  Latency
+                </span>
+                <div className="flex flex-row items-baseline gap-1 mt-0.5">
+                  <span className="font-mono text-[22px] font-black text-foreground">
+                    {ping}
+                  </span>
+                  <span className="font-mono text-[12px] font-bold text-muted">ms</span>
+                </div>
+              </div>
+
+              {/* RAM Usage */}
+              <div className="flex flex-col justify-center rounded-lg border border-border/40 bg-surface-low/30 p-2.5">
+                <span className="font-mono text-[10px] font-bold text-muted uppercase tracking-wider">
+                  RAM (1GB)
+                </span>
+                <div className="flex flex-row items-baseline gap-1 mt-0.5">
+                  <span className="font-mono text-[22px] font-black text-success">
+                    48%
+                  </span>
+                  <span className="font-mono text-[10px] font-bold text-muted">480MB</span>
+                </div>
+              </div>
+
+              {/* Storage Free */}
+              <div className="flex flex-col justify-center rounded-lg border border-border/40 bg-surface-low/30 p-2.5">
+                <span className="font-mono text-[10px] font-bold text-muted uppercase tracking-wider">
+                  Storage Free
+                </span>
+                <div className="flex flex-row items-baseline gap-1 mt-0.5">
+                  <span className="font-mono text-[22px] font-black text-foreground">
+                    3.8
+                  </span>
+                  <span className="font-mono text-[12px] font-bold text-muted">GB</span>
+                </div>
+              </div>
             </div>
-          </div>
+          </Card>
 
-          {/* RAM Usage */}
-          <div className="flex flex-col justify-center rounded-lg border border-border/40 bg-surface-low/30 p-2.5">
-            <span className="font-mono text-[10px] font-bold text-muted uppercase tracking-wider">
-              RAM (1GB)
-            </span>
-            <div className="flex flex-row items-baseline gap-1 mt-0.5">
-              <span className="font-mono text-[22px] font-black text-success">
-                48%
-              </span>
-              <span className="font-mono text-[10px] font-bold text-muted">480MB</span>
+          {/* 2. ACOUSTIC PERFORMANCE METRICS */}
+          <Card className="p-3.5 flex flex-col gap-3">
+            <div className="flex flex-row items-center justify-between border-b border-border/40 pb-2">
+              <div className="flex flex-row items-center gap-2">
+                <Flame className="h-4 w-4 text-danger-soft" />
+                <span className="font-mono text-[12px] font-black tracking-wider text-foreground">
+                  PERFORMANCE METRICS
+                </span>
+              </div>
             </div>
-          </div>
 
-            {/* Storage Free */}
-          <div className="flex flex-col justify-center rounded-lg border border-border/40 bg-surface-low/30 p-2.5">
-            <span className="font-mono text-[10px] font-bold text-muted uppercase tracking-wider">
-              Storage Free
-            </span>
-            <div className="flex flex-row items-baseline gap-1 mt-0.5">
-              <span className="font-mono text-[22px] font-black text-foreground">
-                3.8
-              </span>
-              <span className="font-mono text-[12px] font-bold text-muted">GB</span>
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className="flex flex-col justify-center border border-border/40 bg-surface-low/30 rounded-lg p-2.5">
+                <span className="font-mono text-[10px] font-bold text-muted uppercase tracking-wider">
+                  Api Padam
+                </span>
+                <div className="flex flex-row items-baseline gap-1 mt-0.5">
+                  <span className="font-mono text-[22px] font-black text-danger-soft">{totalFires}</span>
+                  <span className="font-mono text-[11px] font-bold text-muted">titik</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col justify-center border border-border/40 bg-surface-low/30 rounded-lg p-2.5">
+                <span className="font-mono text-[10px] font-bold text-muted uppercase tracking-wider">
+                  Avg. Waktu
+                </span>
+                <div className="flex flex-row items-baseline gap-1 mt-0.5">
+                  <span className="font-mono text-[22px] font-black text-foreground">6.8</span>
+                  <span className="font-mono text-[11px] font-bold text-muted">detik</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col justify-center border border-border/40 bg-surface-low/30 rounded-lg p-2.5">
+                <span className="font-mono text-[10px] font-bold text-muted uppercase tracking-wider">
+                  Best Tone
+                </span>
+                <div className="flex flex-row items-baseline gap-1 mt-0.5">
+                  <span className="font-mono text-[22px] font-black text-success">45</span>
+                  <span className="font-mono text-[11px] font-bold text-muted">Hz</span>
+                </div>
+              </div>
+
+              <div className="flex flex-col justify-center border border-border/40 bg-surface-low/30 rounded-lg p-2.5">
+                <span className="font-mono text-[10px] font-bold text-muted uppercase tracking-wider">
+                  Success Rate
+                </span>
+                <div className="flex flex-row items-baseline gap-1 mt-0.5">
+                  <span className="font-mono text-[22px] font-black text-success">95%</span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* 2. ACOUSTIC PERFORMANCE METRICS */}
-      <Card className="p-3.5 flex flex-col gap-3">
-        <div className="flex flex-row items-center justify-between border-b border-border/40 pb-2">
-          <div className="flex flex-row items-center gap-2">
-            <Flame className="h-4 w-4 text-danger-soft" />
-            <span className="font-mono text-[12px] font-black tracking-wider text-foreground">
-              PERFORMANCE METRICS
-            </span>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2.5">
-          <div className="flex flex-col justify-center border border-border/40 bg-surface-low/30 rounded-lg p-2.5">
-            <span className="font-mono text-[10px] font-bold text-muted uppercase tracking-wider">
-              Api Padam
-            </span>
-            <div className="flex flex-row items-baseline gap-1 mt-0.5">
-              <span className="font-mono text-[22px] font-black text-danger-soft">{totalFires}</span>
-              <span className="font-mono text-[11px] font-bold text-muted">titik</span>
-            </div>
-          </div>
-
-          <div className="flex flex-col justify-center border border-border/40 bg-surface-low/30 rounded-lg p-2.5">
-            <span className="font-mono text-[10px] font-bold text-muted uppercase tracking-wider">
-              Avg. Waktu
-            </span>
-            <div className="flex flex-row items-baseline gap-1 mt-0.5">
-              <span className="font-mono text-[22px] font-black text-foreground">6.8</span>
-              <span className="font-mono text-[11px] font-bold text-muted">detik</span>
-            </div>
-          </div>
-
-          <div className="flex flex-col justify-center border border-border/40 bg-surface-low/30 rounded-lg p-2.5">
-            <span className="font-mono text-[10px] font-bold text-muted uppercase tracking-wider">
-              Best Tone
-            </span>
-            <div className="flex flex-row items-baseline gap-1 mt-0.5">
-              <span className="font-mono text-[22px] font-black text-success">45</span>
-              <span className="font-mono text-[11px] font-bold text-muted">Hz</span>
-            </div>
-          </div>
-
-          <div className="flex flex-col justify-center border border-border/40 bg-surface-low/30 rounded-lg p-2.5">
-            <span className="font-mono text-[10px] font-bold text-muted uppercase tracking-wider">
-              Success Rate
-            </span>
-            <div className="flex flex-row items-baseline gap-1 mt-0.5">
-              <span className="font-mono text-[22px] font-black text-success">96.7%</span>
-            </div>
-          </div>
-        </div>
-      </Card>
+          </Card>
+        </>
+      ) : (
+        <Card className="p-4 flex flex-col items-center justify-center gap-2 text-center border-dashed border-border/60 bg-surface-low/30">
+          <Cpu className="h-5 w-5 text-muted/60" />
+          <span className="font-mono text-[11px] font-bold tracking-wider text-muted uppercase">
+            Telemetri Hardware Offline
+          </span>
+          <p className="font-mono text-[10px] text-muted/60 max-w-xs">
+            Metrik telemetri hardware Raspberry Pi disembunyikan karena unit belum terhubung.
+          </p>
+        </Card>
+      )}
 
       {/* 3. MONTHLY LOGS SECTION (Juni, Juli, Agustus, September) */}
       <div className="flex flex-col gap-2 mt-1">
@@ -457,11 +473,10 @@ export function RiwayatSection({
                       {record.freq} • {record.duration}
                     </span>
                     <span
-                      className={`font-black ml-auto text-[10px] px-1.5 py-0.5 rounded ${
-                        record.status === 'success'
+                      className={`font-black ml-auto text-[10px] px-1.5 py-0.5 rounded ${record.status === 'success'
                           ? 'bg-success/10 text-success'
                           : 'bg-danger/10 text-danger-soft'
-                      }`}
+                        }`}
                     >
                       {record.status === 'success' ? 'PADAM' : 'EVALUASI'}
                     </span>

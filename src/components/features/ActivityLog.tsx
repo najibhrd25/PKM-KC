@@ -58,9 +58,11 @@ export function ActivityLog({
                 className={`font-mono text-[11px] font-black tracking-wider ${
                   log.tone === 'danger'
                     ? 'text-danger-soft'
-                    : log.tone === 'success'
-                      ? 'text-success'
-                      : 'text-foreground'
+                    : log.tone === 'warning'
+                      ? 'text-amber-400'
+                      : log.tone === 'success'
+                        ? 'text-success'
+                        : 'text-foreground'
                 }`}
               >
                 {log.title}

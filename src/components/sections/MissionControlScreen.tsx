@@ -22,6 +22,7 @@ export function MissionControlScreen() {
     activityLogs,
     isManual,
     isAudioPlaying,
+    isPiConnected,
     startupPhase,
     state,
     temperature,
@@ -87,6 +88,7 @@ export function MissionControlScreen() {
         logs: activityLogs,
         state,
         temperature,
+        isPiConnected,
       });
     } catch {
       alert('Export failed: The PDF report could not be created.');
@@ -97,9 +99,15 @@ export function MissionControlScreen() {
 
   return (
     <div className="flex min-h-dvh w-full flex-1 flex-col bg-background">
-      <Header state={state} isManual={isManual} onPowerPress={handlePowerPress} onHomePress={handleHomePress} />
+      <Header
+        state={state}
+        isManual={isManual}
+        isPiConnected={isPiConnected}
+        onPowerPress={handlePowerPress}
+        onHomePress={handleHomePress}
+      />
 
-      <div className="flex w-full flex-1 flex-col gap-3 overflow-y-auto px-4 pb-20">
+      <div className="flex w-full flex-1 flex-col gap-3 overflow-y-auto px-4 pb-20 max-w-6xl mx-auto">
         <div className="flex flex-col gap-0.5 pt-1">
           <span
             className={`font-mono text-[9px] font-bold tracking-[2px] ${
@@ -159,6 +167,7 @@ export function MissionControlScreen() {
           <RiwayatSection
             temperature={temperature}
             activityLogsCount={activityLogs.length}
+            isPiConnected={isPiConnected}
           />
         )}
       </div>

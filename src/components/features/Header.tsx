@@ -6,6 +6,7 @@ import { StatusPill } from '@/components/ui/StatusPill';
 interface HeaderProps {
   state: string;
   isManual: boolean;
+  isPiConnected?: boolean;
   onPowerPress: () => void;
   onHomePress: () => void;
 }
@@ -15,7 +16,7 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 }
 
-export function Header({ state, isManual, onPowerPress, onHomePress }: HeaderProps) {
+export function Header({ state, isManual, isPiConnected = false, onPowerPress, onHomePress }: HeaderProps) {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showGuide, setShowGuide] = useState(false);
 
@@ -53,7 +54,8 @@ export function Header({ state, isManual, onPowerPress, onHomePress }: HeaderPro
 
   return (
     <>
-      <div className="flex w-full flex-row items-center justify-between px-4 py-2.5">
+      <div className="w-full border-b border-border/20 bg-background/80 backdrop-blur-md">
+        <div className="flex w-full max-w-6xl mx-auto flex-row items-center justify-between px-4 py-2.5">
         <div className="flex flex-row items-center gap-2.5">
           <img src={safeLogo} alt="S.A.F.E. Logo" className="h-[54px] w-[54px] object-contain" />
           <div>
@@ -61,9 +63,9 @@ export function Header({ state, isManual, onPowerPress, onHomePress }: HeaderPro
               S.A.F.E.
             </p>
             <StatusPill
-              label={isOff ? 'OFFLINE' : isStarting ? 'STARTING' : 'ONLINE'}
-              tone={isOff ? 'idle' : 'active'}
-              isPulsing={isPulsing}
+              label={isOff ? 'OFFLINE' : !isPiConnected ? 'PI OFFLINE' : isStarting ? 'STARTING' : 'ONLINE'}
+              tone={isOff || !isPiConnected ? 'idle' : 'active'}
+              isPulsing={isPulsing && isPiConnected}
             />
           </div>
         </div>
@@ -110,6 +112,7 @@ export function Header({ state, isManual, onPowerPress, onHomePress }: HeaderPro
           </button>
         </div>
       </div>
+    </div>
 
       {/* Panduan Instalasi Modal (PWA) */}
       {showGuide && (

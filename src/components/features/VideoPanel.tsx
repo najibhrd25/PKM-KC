@@ -14,61 +14,43 @@ interface VideoPanelProps {
 // const START_TIME = 0.9888; // Detik mulai video (misal 55 detik atau awal)
 
 export function VideoPanel({ isOff }: VideoPanelProps) {
-  // [KODE OPSI VIDEO] - Hook kontrol video:
-  // const videoRef = useRef<HTMLVideoElement>(null);
-  // useEffect(() => {
-  //   const video = videoRef.current;
-  //   if (!video) return;
-  //   const setInitialTime = () => {
-  //     video.currentTime = START_TIME;
-  //     video.play().catch(() => {});
-  //   };
-  //   const handleEnded = () => {
-  //     video.currentTime = START_TIME;
-  //     video.play().catch(() => {});
-  //   };
-  //   if (video.readyState >= 1) {
-  //     setInitialTime();
-  //   } else {
-  //     video.addEventListener('loadedmetadata', setInitialTime, { once: true });
-  //   }
-  //   video.addEventListener('ended', handleEnded);
-  //   return () => {
-  //     video.removeEventListener('loadedmetadata', setInitialTime);
-  //     video.removeEventListener('ended', handleEnded);
-  //   };
-  // }, []);
-
+  const [streamError, setStreamError] = useState(false);
   const streamUrl = getCameraStreamUrl();
 
   return (
     <Card
-      className={`relative w-full aspect-[16/10.5] max-h-[235px] overflow-hidden bg-black ${isOff ? 'opacity-[0.45]' : ''
-        }`}
+      className={`relative w-full aspect-[16/10.5] max-h-[235px] overflow-hidden bg-black ${
+        isOff ? 'opacity-[0.45]' : ''
+      }`}
     >
-      <div className="absolute inset-0 overflow-hidden flex items-center justify-center">
-        {/* ==================================================================== */}
-        {/* STREAM KAMERA ASLI DARI RASPBERRY PI (TANPA FOTO DUMMY)              */}
-        {/* ==================================================================== */}
-        <img
-          src={streamUrl}
-          alt="Live Camera Feed"
-          className="h-full w-full object-cover object-center"
-        />
-
-        {/* ==================================================================== */}
-        {/* 2. OPSI VIDEO (Aktifkan tag di bawah ini & matikan tag <img> di atas)  */}
-        {/* ==================================================================== */}
-        {/*
-        <video
-          ref={videoRef}
-          src="/Recordddddd.mp4"
-          autoPlay
-          muted
-          playsInline
-          className="h-full w-full object-cover object-center scale-[1.18] origin-center"
-        />
-        */}
+      <div className="absolute inset-0 overflow-hidden flex items-center justify-center bg-black">
+        {/* Stream langsung dari Raspberry Pi */}
+        {!streamError ? (
+          <img
+            src={streamUrl}
+            alt="Live Camera Feed Raspberry Pi"
+            onError={() => setStreamError(true)}
+            onLoad={() => setStreamError(false)}
+            className="h-full w-full object-cover object-center"
+          />
+        ) : (
+          <div className="flex flex-col items-center justify-center gap-2 p-4 text-center">
+            <div className="h-2.5 w-2.5 rounded-full bg-red-500/80 animate-pulse" />
+            <span className="font-mono text-[11px] font-bold tracking-wider text-muted uppercase">
+              Kamera Raspberry Pi Offline
+            </span>
+            <span className="font-mono text-[9px] text-muted/60">
+              {streamUrl}
+            </span>
+            <button
+              type="button"
+              onClick={() => setStreamError(false)}
+              className="mt-1 px-3 py-1 text-[10px] font-mono font-bold rounded border border-border bg-surface-high hover:border-danger-soft transition-colors cursor-pointer text-foreground"
+            >
+              Coba Hubungkan Ulang
+            </button>
+          </div>
+        )}
       </div>
     </Card>
   );

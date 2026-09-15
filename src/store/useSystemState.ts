@@ -33,6 +33,7 @@ function clearTimers() {
 interface SystemStore {
   state: SystemState;
   isManual: boolean;
+  isPiConnected: boolean;
   startupPhase: StartupPhase;
   temperature: number;
   waveform: string;
@@ -62,6 +63,7 @@ let lastHeartbeatTime = 0;
 export const useSystemState = create<SystemStore>()((set, get) => ({
   state: 'AUTO_MODE',
   isManual: false,
+  isPiConnected: false,
   startupPhase: { ...initialStartupPhase, logsInitialized: true, cameraVisible: true, numbersRolled: true, filterRemoved: true, audioPlayed: true },
   temperature: 0,
   waveform: 'sine',
@@ -222,8 +224,18 @@ export const useSystemState = create<SystemStore>()((set, get) => ({
   _initSSE: () => {
     get()._closeSSE();
     eventSource = new EventSource(getEventsUrl());
+
+    eventSource.onopen = () => {
+      set({ isPiConnected: true });
+    };
+
+    eventSource.onerror = () => {
+      set({ isPiConnected: false });
+    };
+
     eventSource.onmessage = (e) => {
       try {
+        set({ isPiConnected: true });
         const d = JSON.parse(e.data);
         const timeStr = new Date().toLocaleTimeString('en-US', { hour12: false });
         
@@ -284,5 +296,6 @@ export const useSystemState = create<SystemStore>()((set, get) => ({
       eventSource.close();
       eventSource = null;
     }
+    set({ isPiConnected: false });
   }
 }));
