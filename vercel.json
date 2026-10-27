@@ -1,4 +1,8 @@
 {
+  "framework": null,
+  "buildCommand": null,
+  "installCommand": null,
+  "outputDirectory": ".",
   "cleanUrls": true,
   "rewrites": [
     { "source": "/auto", "destination": "/index.html" },
