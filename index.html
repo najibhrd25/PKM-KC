@@ -1049,7 +1049,7 @@
           <!-- LAYAR KAMERA BESAR DI SEBELAH KIRI -->
           <div class="laptop-left">
             <div class="card video-card">
-              <img class="stream-feed" id="streamAuto" src="/assets/live-camera.png" alt="Live Camera Feed" />
+              <img class="stream-feed" id="streamAuto" src="/stream" alt="Live Camera Feed" />
             </div>
             <!-- Activity Log Otomatis di bawah kamera -->
             <div class="card log-card">
@@ -1120,7 +1120,7 @@
           <!-- LAYAR KAMERA BESAR DI SEBELAH KIRI -->
           <div class="laptop-left">
             <div class="card video-card">
-              <img class="stream-feed" id="streamManual" src="/assets/live-camera.png" alt="Live Camera Feed" />
+              <img class="stream-feed" id="streamManual" src="/stream" alt="Live Camera Feed" />
             </div>
             <!-- Activity Log Manual di bawah kamera -->
             <div class="card log-card">
@@ -1296,7 +1296,7 @@
                     location.hostname.startsWith('10.');
     const BASE_URL = isLocal ? '' : 'https://safe1.abedtgr.my.id';
 
-    // Inisialisasi Feed Live Stream Kamera dengan fallback offline
+    // Inisialisasi Feed Live Stream Kamera langsung real-time
     function initStreamFeeds() {
       const streamUrl = (BASE_URL || '') + "/stream";
       ["streamAuto", "streamManual"].forEach(id => {
@@ -1304,8 +1304,10 @@
         if (el) {
           el.src = streamUrl;
           el.onerror = () => {
-            // Jika stream terputus atau Pi offline, gunakan placeholder tanpa broken icon
-            el.src = "/assets/live-camera.png";
+            console.warn("Live stream reconnecting...");
+            setTimeout(() => {
+              el.src = streamUrl + (streamUrl.includes('?') ? '&' : '?') + "t=" + Date.now();
+            }, 3000);
           };
         }
       });
