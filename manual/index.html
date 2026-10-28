@@ -304,6 +304,43 @@
       object-fit: cover;
       display: block;
     }
+    .stream-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(6px);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      cursor: pointer;
+      user-select: none;
+      z-index: 5;
+      transition: all 0.2s ease;
+    }
+    .stream-badge:active {
+      transform: scale(0.95);
+      background: rgba(16, 185, 129, 0.2);
+    }
+    .stream-badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 6px #10b981;
+      animation: blink-dot 1.5s infinite ease-in-out;
+    }
+    @keyframes blink-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(0.75); }
+    }
 
     /* STATS CARDS (AUTO) */
     .stats-row {
@@ -1049,7 +1086,10 @@
           <!-- LAYAR KAMERA BESAR DI SEBELAH KIRI -->
           <div class="laptop-left">
             <div class="card video-card">
-              <img class="stream-feed" id="streamAuto" src="/stream" alt="Live Camera Feed" />
+              <div class="stream-badge" onclick="forceRefreshStream(event)" title="Live Camera Feed (Klik untuk refresh antrean)">
+                <span class="dot"></span> LIVE
+              </div>
+              <img class="stream-feed" id="streamAuto" src="" alt="Live Camera Feed" />
             </div>
             <!-- Activity Log Otomatis di bawah kamera -->
             <div class="card log-card">
@@ -1120,7 +1160,10 @@
           <!-- LAYAR KAMERA BESAR DI SEBELAH KIRI -->
           <div class="laptop-left">
             <div class="card video-card">
-              <img class="stream-feed" id="streamManual" src="/stream" alt="Live Camera Feed" />
+              <div class="stream-badge" onclick="forceRefreshStream(event)" title="Live Camera Feed (Klik untuk refresh antrean)">
+                <span class="dot"></span> LIVE
+              </div>
+              <img class="stream-feed" id="streamManual" src="" alt="Live Camera Feed" />
             </div>
             <!-- Activity Log Manual di bawah kamera -->
             <div class="card log-card">
@@ -1296,21 +1339,90 @@
                     location.hostname.startsWith('10.');
     const BASE_URL = isLocal ? '' : 'https://safe1.abedtgr.my.id';
 
-    // Inisialisasi Feed Live Stream Kamera langsung real-time
-    function initStreamFeeds() {
-      const streamUrl = (BASE_URL || '') + "/stream";
-      ["streamAuto", "streamManual"].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-          el.src = streamUrl;
-          el.onerror = () => {
-            console.warn("Live stream reconnecting...");
-            setTimeout(() => {
-              el.src = streamUrl + (streamUrl.includes('?') ? '&' : '?') + "t=" + Date.now();
-            }, 3000);
-          };
+    // Remote: satu snapshot per request agar frame tidak mengantre di tunnel.
+    // LAN: MJPEG tetap dipakai untuk kelancaran jaringan lokal.
+    let streamTimer = null;
+    let streamRequest = null;
+    let streamGeneration = 0;
+    let streamObjectUrl = null;
+    // Hanya memutar 1 stream aktif sesuai tab yang sedang dilihat (hemat 50% kuota & anti antrean buffer).
+    function getStreamUrl() {
+      return (BASE_URL || '') + "/stream?t=" + Date.now();
+    }
+
+    function updateActiveStreamFeed() {
+      const generation = ++streamGeneration;
+      clearTimeout(streamTimer);
+      if (streamRequest) streamRequest.abort();
+      streamRequest = null;
+      const autoEl = document.getElementById("streamAuto");
+      const manualEl = document.getElementById("streamManual");
+      for (const element of [autoEl, manualEl]) {
+        if (element) {
+          element.onerror = null;
+          element.removeAttribute("src");
         }
-      });
+      }
+      if (streamObjectUrl) URL.revokeObjectURL(streamObjectUrl);
+      streamObjectUrl = null;
+      const activeImg = currentTab === "auto" ? autoEl :
+                        currentTab === "manual" ? manualEl : null;
+      if (document.visibilityState === "hidden" || !activeImg) return;
+
+      if (isLocal) {
+        activeImg.onerror = () => {
+          clearTimeout(streamTimer);
+          streamTimer = setTimeout(() => {
+            if (generation === streamGeneration) updateActiveStreamFeed();
+          }, 1500);
+        };
+        activeImg.src = getStreamUrl();
+        return;
+      }
+
+      async function nextSnapshot() {
+        if (generation !== streamGeneration) return;
+        const started = performance.now();
+        const request = new AbortController();
+        streamRequest = request;
+        const timeout = setTimeout(() => request.abort(), 2500);
+        let retryDelay = 100;
+        try {
+          const response = await fetch(BASE_URL + "/snapshot.jpg?t=" + Date.now(), {
+            cache: "no-store", signal: request.signal
+          });
+          if (!response.ok) throw new Error("Camera unavailable");
+          const blob = await response.blob();
+          if (generation !== streamGeneration) return;
+          const previous = streamObjectUrl;
+          streamObjectUrl = URL.createObjectURL(blob);
+          activeImg.src = streamObjectUrl;
+          if (previous) URL.revokeObjectURL(previous);
+          // Maksimal 10 FPS; jaringan lambat otomatis menurunkan FPS tanpa backlog.
+          retryDelay = Math.max(0, 100 - (performance.now() - started));
+        } catch (_) {
+          retryDelay = 500;
+        } finally {
+          clearTimeout(timeout);
+          if (generation === streamGeneration) {
+            streamRequest = null;
+            streamTimer = setTimeout(nextSnapshot, retryDelay);
+          }
+        }
+      }
+      nextSnapshot();
+    }
+
+    // Fungsi klik manual untuk refresh antrean instan
+    function forceRefreshStream(e) {
+      if (e) e.stopPropagation();
+      console.log("Memperbarui feed stream untuk membuang antrean delay...");
+      updateActiveStreamFeed();
+    }
+
+    function initStreamFeeds() {
+      // Saat browser/aplikasi dibuka kembali dari background, segarkan koneksi langsung
+      document.addEventListener("visibilitychange", updateActiveStreamFeed);
     }
     window.addEventListener("DOMContentLoaded", initStreamFeeds);
 
@@ -1322,9 +1434,104 @@
       jog_step_deg: 3.0, ir_threshold_v: 1.5, n_ir: 5, ir_reverse: true
     };
 
+    // ================= LOW-LATENCY CONTROL CHANNEL =================
+    // WebSocket menghindari satu HTTP round-trip untuk setiap langkah joystick.
+    // Fallback HTTP tetap tersedia dan hanya mengizinkan satu request aktif.
+    let controlSocket = null;
+    let controlSocketRetryAt = 0;
+    let jogFetchInFlight = false;
+    let pendingJogFetch = null;
+    let jogFetchController = null;
+    let controlAwaitingAck = false;
+    let controlSentAt = 0;
+
+    function getControlSocketUrl() {
+      const url = new URL("/ws/control", BASE_URL || window.location.origin);
+      url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+      return url.toString();
+    }
+
+    function ensureControlSocket() {
+      if (controlSocket &&
+          (controlSocket.readyState === WebSocket.OPEN ||
+           controlSocket.readyState === WebSocket.CONNECTING)) return;
+      if (Date.now() < controlSocketRetryAt) return;
+
+      const socket = new WebSocket(getControlSocketUrl());
+      controlSocket = socket;
+      socket.onmessage = (event) => {
+        if (controlSocket !== socket) return;
+        const message = JSON.parse(event.data);
+        if (message.type === "ack") controlAwaitingAck = false;
+      };
+      socket.onclose = () => {
+        if (controlSocket === socket) {
+          controlSocket = null;
+          controlAwaitingAck = false;
+        }
+        controlSocketRetryAt = Date.now() + 1500;
+      };
+      socket.onerror = () => socket.close();
+    }
+
+    async function flushJogFetch() {
+      if (jogFetchInFlight || !pendingJogFetch) return;
+      const command = pendingJogFetch;
+      pendingJogFetch = null;
+      jogFetchInFlight = true;
+      const controller = new AbortController();
+      jogFetchController = controller;
+      const timeout = setTimeout(() => controller.abort(), 1000);
+      try {
+        await fetch(BASE_URL + "/cmd/jog", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(command), signal: controller.signal
+        });
+      } catch (_) {
+        // Gerakan berikutnya akan mencoba kembali; command lama sengaja dibuang.
+      } finally {
+        clearTimeout(timeout);
+        if (jogFetchController === controller) jogFetchController = null;
+        jogFetchInFlight = false;
+        if (pendingJogFetch) flushJogFetch();
+      }
+    }
+
+    function sendJogCommand(dYaw, dPitch) {
+      if (currentTab !== "manual" || document.visibilityState !== "visible") return;
+      ensureControlSocket();
+      const command = { d_yaw: dYaw, d_pitch: dPitch };
+      if (controlSocket && controlSocket.readyState === WebSocket.OPEN) {
+        pendingJogFetch = null;
+        if (controlAwaitingAck) {
+          if (performance.now() - controlSentAt > 1000) controlSocket.close();
+          return;
+        }
+        if (controlSocket.bufferedAmount > 0 || jogFetchInFlight) return;
+        controlAwaitingAck = true;
+        controlSentAt = performance.now();
+        controlSocket.send(JSON.stringify({ type: "jog", ...command }));
+        return;
+      }
+      pendingJogFetch = command;
+      flushJogFetch();
+    }
+
+    function stopJogCommand() {
+      pendingJogFetch = null;
+      if (jogFetchController) jogFetchController.abort();
+      if (controlSocket && controlSocket.readyState === WebSocket.OPEN) {
+        controlSocket.send(JSON.stringify({ type: "stop" }));
+      }
+    }
+
     // ================= CLIENT-SIDE ROUTER / TAB SWITCHER =================
-    function switchTab(tab, updateUrl = true) {
+    function switchTab(tab, updateUrl = true, notifyServer = true) {
       currentTab = tab;
+      updateActiveStreamFeed();
+      if (tab === "manual") ensureControlSocket();
+      else stopJogCommand();
       if (updateUrl && window.history.pushState) {
         window.history.pushState({ tab }, "", "#" + tab);
       }
@@ -1359,17 +1566,21 @@
       if (tab === "auto") {
         st.textContent = "ONLINE";
         badge.textContent = "AUTOMATIC MONITORING ACTIVE";
-        fetch(BASE_URL + "/cmd/mode", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode: "auto" })
-        }).catch(() => {});
+        if (notifyServer) {
+          fetch(BASE_URL + "/cmd/mode", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode: "auto" })
+          }).catch(() => {});
+        }
       } else if (tab === "manual") {
         st.textContent = "MANUAL ON";
         badge.textContent = "MANUAL CONTROL ACTIVE";
-        fetch(BASE_URL + "/cmd/mode", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ mode: "manual" })
-        }).catch(() => {});
+        if (notifyServer) {
+          fetch(BASE_URL + "/cmd/mode", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode: "manual" })
+          }).catch(() => {});
+        }
       } else if (tab === "analisis") {
         st.textContent = "DIAGNOSTICS";
         badge.textContent = "SYSTEM DIAGNOSTICS & HISTORY";
@@ -1470,6 +1681,7 @@
 
     function joyReset() {
       joyNX = joyNY = 0;
+      stopJogCommand();
       joyKnob.style.left = "50%";
       joyKnob.style.top = "50%";
       joyKnob.classList.remove("active");
@@ -1480,15 +1692,19 @@
       joyKnob.setPointerCapture(ev.pointerId);
       joyKnob.classList.add("active");
       joyUpdate(ev.clientX, ev.clientY);
+      sendJogCommand(
+        joyNX * LIMITS.jog_step_deg,
+        joyNY * LIMITS.jog_step_deg
+      );
       joyTimer = setInterval(() => {
-        if (Math.abs(joyNX) < 0.05 && Math.abs(joyNY) < 0.05) return;
-        fetch(BASE_URL + "/cmd/jog", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            d_yaw: joyNX * LIMITS.jog_step_deg,
-            d_pitch: joyNY * LIMITS.jog_step_deg
-          })
-        }).catch(() => {});
+        if (Math.abs(joyNX) < 0.05 && Math.abs(joyNY) < 0.05) {
+          stopJogCommand();
+          return;
+        }
+        sendJogCommand(
+          joyNX * LIMITS.jog_step_deg,
+          joyNY * LIMITS.jog_step_deg
+        );
       }, 100);
     });
     joyKnob.addEventListener("pointermove", (ev) => {
@@ -1496,6 +1712,12 @@
     });
     joyKnob.addEventListener("pointerup", joyReset);
     joyKnob.addEventListener("pointercancel", joyReset);
+    joyKnob.addEventListener("lostpointercapture", joyReset);
+    window.addEventListener("blur", joyReset);
+    window.addEventListener("pagehide", joyReset);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") joyReset();
+    });
 
     // ================= IR SENSOR BARS =================
     const IR_VMAX = 3.3;
@@ -1576,6 +1798,13 @@
       const msg = JSON.parse(ev.data);
       if (msg.type === "ir") updateIR(msg);
       else if (msg.type === "log") addLog(msg);
+      else if (msg.type === "mode") {
+        const mode = msg.value;
+        if ((mode === "auto" || mode === "manual") && currentTab !== mode && currentTab !== "analisis") {
+          console.log("Sinkronisasi mode otomatis antar-perangkat:", mode);
+          switchTab(mode, true, false);
+        }
+      }
       else if (msg.type === "audio") {
         isAudioPlaying = msg.playing;
         const btn = document.getElementById("btnShoot");

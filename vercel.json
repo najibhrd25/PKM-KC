@@ -1,13 +1,11 @@
 {
-  "framework": null,
-  "buildCommand": null,
-  "installCommand": null,
-  "outputDirectory": ".",
+  "outputDirectory": "public",
   "cleanUrls": true,
   "rewrites": [
-    { "source": "/auto", "destination": "/index.html" },
-    { "source": "/manual", "destination": "/index.html" },
-    { "source": "/analisis", "destination": "/index.html" },
+    { "source": "/auto", "destination": "/auto/index.html" },
+    { "source": "/manual", "destination": "/manual/index.html" },
+    { "source": "/analisis", "destination": "/analisis/index.html" },
+    { "source": "/assets/(.*)", "destination": "/assets/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

@@ -1,0 +1,1956 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>S.A.F.E — Mission Control Dashboard</title>
+  
+  <!-- PWA & Mobile Meta Tags -->
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#0E0E0E" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="S.A.F.E." />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/assets/pwa-192x192.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0E0E0E;
+      --surface: #131313;
+      --surface-low: #181818;
+      --surface-high: #202020;
+      --border: #282828;
+      --border-accent: #3A2A28;
+      --foreground: #E2E2E2;
+      --muted: #8D8583;
+      --danger: #DC2626;
+      --danger-soft: #FFB4AB;
+      --danger-bg: rgba(220, 38, 38, 0.15);
+      --success: #22C55E;
+      --success-bg: rgba(34, 197, 94, 0.15);
+      --info: #60A5FA;
+      --info-bg: rgba(96, 165, 250, 0.15);
+      color-scheme: dark;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg);
+      color: var(--foreground);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      -webkit-font-smoothing: antialiased;
+    }
+    .app-container {
+      width: 100%;
+      max-width: 1320px; /* Lebar optimal desktop / laptop */
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* TOP HEADER & NAVBAR */
+    .header {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 24px;
+      width: 100%;
+      border-bottom: 1px solid rgba(40, 40, 40, 0.6);
+      background: rgba(19, 19, 19, 0.9);
+      backdrop-filter: blur(14px);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .header-left {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 14px;
+    }
+    .header-logo {
+      height: 48px;
+      width: 48px;
+      object-fit: contain;
+    }
+    .header-title-wrap p {
+      font-size: 19px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .status-pill {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-dot {
+      height: 8px;
+      width: 8px;
+      border-radius: 2px;
+      background-color: var(--success);
+      box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+      transition: background-color 0.2s, box-shadow 0.2s;
+    }
+    .status-dot.manual {
+      background-color: var(--danger);
+      box-shadow: 0 0 8px rgba(220, 38, 38, 0.8);
+      animation: pulse-dot 1.5s infinite;
+    }
+    .status-dot.analisis {
+      background-color: var(--info);
+      box-shadow: 0 0 8px rgba(96, 165, 250, 0.6);
+      animation: none;
+    }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    .status-pill span {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 1.8px;
+    }
+
+    /* TOP NAVBAR KHUSUS LAPTOP / DESKTOP (TAMPIL DI HEADER) */
+    .top-nav {
+      display: none;
+      position: relative;
+      background: var(--surface-low);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 3px;
+      height: 42px;
+      width: 380px;
+    }
+    .top-nav-indicator {
+      position: absolute;
+      top: 3px;
+      bottom: 3px;
+      width: 33.333%;
+      border-radius: 999px;
+      background: rgba(220, 38, 38, 0.2);
+      border: 1px solid rgba(220, 38, 38, 0.4);
+      transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: none;
+    }
+    .top-nav-indicator.pos-auto { left: 3px; }
+    .top-nav-indicator.pos-manual { left: calc(33.333% + 1px); }
+    .top-nav-indicator.pos-analisis { left: calc(66.666% - 1px); }
+    
+    .top-nav-btn {
+      position: relative;
+      z-index: 10;
+      flex: 1;
+      height: 100%;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: color 0.15s ease;
+    }
+    .top-nav-btn.active {
+      color: var(--danger-soft);
+      font-weight: 800;
+    }
+    .top-nav-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .btn-circle {
+      height: 40px;
+      width: 40px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background-color: var(--surface-high);
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .btn-circle:hover {
+      border-color: #444;
+      color: var(--foreground);
+    }
+    .btn-circle:active {
+      transform: scale(0.96);
+    }
+
+    /* TITLE BAR */
+    .title-sec {
+      padding: 14px 24px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .badge-tab {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    .badge-tab.auto { color: var(--success); }
+    .badge-tab.manual { color: var(--danger-soft); }
+    .badge-tab.analisis { color: var(--info); }
+    .title-sec h1 {
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+    }
+
+    /* CONTENT WRAPPER */
+    .content {
+      padding: 0 24px 30px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      flex: 1;
+    }
+    .tab-pane {
+      display: none;
+      width: 100%;
+    }
+    .tab-pane.active {
+      display: flex;
+    }
+
+    /* DESKTOP SPLIT: Layar Kamera Kiri Besar, Fitur Kanan */
+    .laptop-split {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      width: 100%;
+    }
+    @media (min-width: 900px) {
+      .top-nav {
+        display: flex; /* Navbar atas aktif di laptop */
+      }
+      .bottom-nav {
+        display: none !important; /* Navbar bawah hilang di layar laptop */
+      }
+      .app-container {
+        padding-bottom: 24px; /* Hapus padding bottom mobile */
+      }
+      .laptop-split {
+        flex-direction: row;
+        align-items: flex-start;
+      }
+      .laptop-left {
+        flex: 1.35; /* Kamera besar sebelah kiri */
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+      .laptop-right {
+        flex: 1; /* Semua kontrol/fitur di sebelah kanan */
+        min-width: 400px;
+        max-width: 480px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+    }
+
+    /* CARDS */
+    .card {
+      border: 1px solid var(--border);
+      background-color: var(--surface-low);
+    }
+
+    /* VIDEO PANEL */
+    .video-card {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 10;
+      overflow: hidden;
+      background: #000;
+      border: 1px solid var(--border);
+    }
+    .video-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .stream-badge {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(6px);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      color: #10b981;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      cursor: pointer;
+      user-select: none;
+      z-index: 5;
+      transition: all 0.2s ease;
+    }
+    .stream-badge:active {
+      transform: scale(0.95);
+      background: rgba(16, 185, 129, 0.2);
+    }
+    .stream-badge .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 6px #10b981;
+      animation: blink-dot 1.5s infinite ease-in-out;
+    }
+    @keyframes blink-dot {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.35; transform: scale(0.75); }
+    }
+
+    /* STATS CARDS (AUTO) */
+    .stats-row {
+      display: flex;
+      flex-direction: row;
+      gap: 12px;
+      width: 100%;
+    }
+    .sensor-card {
+      flex: 1;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      justify-content: space-between;
+    }
+    .stat-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      border: 1px solid rgba(40, 40, 40, 0.6);
+      background: rgba(24, 24, 24, 0.4);
+      padding: 10px 6px;
+    }
+    .stat-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 2px;
+    }
+    .stat-val-row {
+      display: flex;
+      align-items: baseline;
+      gap: 3px;
+    }
+    .stat-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 19px;
+      font-weight: 900;
+      color: var(--foreground);
+    }
+    .stat-unit {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    /* CONTROLS ROW (MANUAL) */
+    .controls-row {
+      display: flex;
+      flex-direction: row;
+      gap: 12px;
+      width: 100%;
+      min-height: 286px;
+    }
+    .sensor-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .input-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: rgba(24, 24, 24, 0.4);
+      padding: 8px 10px;
+      transition: border-color 0.15s ease;
+    }
+    .input-box:focus-within {
+      border-color: var(--danger-soft);
+      background: rgba(220, 38, 38, 0.05);
+    }
+    .input-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 2px;
+    }
+    .input-inner {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      width: 100%;
+    }
+    .input-inner input, .input-inner select {
+      background: transparent;
+      border: none;
+      outline: none;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px;
+      font-weight: 900;
+      color: var(--foreground);
+      text-align: center;
+      width: 65px;
+    }
+    .input-inner select {
+      width: 100%;
+      cursor: pointer;
+      text-align-last: center;
+    }
+    .input-inner select option {
+      background: var(--surface);
+      color: var(--foreground);
+    }
+    .input-inner span {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    /* RIGHT: JOYSTICK & SHOOT */
+    .joystick-card {
+      flex: 1;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .joy-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 1.4px;
+      color: var(--success);
+      text-align: center;
+    }
+    #joyBase {
+      width: 116px;
+      height: 116px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 1px solid var(--border-accent);
+      position: relative;
+      touch-action: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: inset 0 2px 8px rgba(0,0,0,0.6);
+    }
+    .joy-dashed {
+      position: absolute;
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      border: 1px dashed rgba(255, 255, 255, 0.2);
+      pointer-events: none;
+    }
+    #joyKnob {
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: var(--danger);
+      border: 1px solid var(--danger-soft);
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      cursor: grab;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 14px rgba(220, 38, 38, 0.4);
+      user-select: none;
+    }
+    #joyKnob.active {
+      cursor: grabbing;
+      box-shadow: 0 0 20px rgba(220, 38, 38, 0.7);
+    }
+    .joy-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ffffff;
+    }
+
+    .recovery-box {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .rec-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .rec-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      letter-spacing: 1.2px;
+      color: var(--muted);
+    }
+    .rec-status {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 1.2px;
+      color: var(--danger-soft);
+      margin-top: 2px;
+    }
+    .rec-freq {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+    .btn-shoot {
+      width: 100%;
+      min-height: 40px;
+      border-radius: 6px;
+      border: 1px solid var(--danger-soft);
+      background: var(--danger);
+      color: #fff;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1.2px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: 0 2px 10px rgba(220, 38, 38, 0.35);
+      transition: all 0.15s ease;
+    }
+    .btn-shoot:active { transform: scale(0.98); }
+    .btn-shoot.playing {
+      background: #b91c1c;
+      animation: pulse-shoot 1s infinite;
+    }
+    @keyframes pulse-shoot {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.6); }
+      50% { box-shadow: 0 0 12px 2px rgba(220, 38, 38, 0.8); }
+    }
+
+    /* IR SENSOR SECTION */
+    .ir-card {
+      padding: 14px 16px;
+    }
+    .ir-title-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .ir-title-row span {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: var(--muted);
+    }
+    .badge-ir {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      background: #202020;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .badge-ir.hot {
+      background: var(--danger-bg);
+      color: var(--danger-soft);
+      border-color: rgba(220, 38, 38, 0.4);
+    }
+    .irbars {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      margin: 10px 0 6px;
+    }
+    .irbar {
+      flex: 1;
+      text-align: center;
+    }
+    .irbar .col {
+      position: relative;
+      height: 70px;
+      background: #0A0A0A;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .irbar .fill {
+      position: absolute;
+      left: 0; right: 0; bottom: 0; height: 0%;
+      background: linear-gradient(180deg, #3b82f6 0%, rgba(59, 130, 246, 0.4) 100%);
+      transition: height .12s;
+    }
+    .irbar.hot .fill {
+      background: linear-gradient(180deg, var(--danger) 0%, rgba(220, 38, 38, 0.4) 100%);
+      box-shadow: 0 0 10px rgba(220, 38, 38, 0.6);
+    }
+    .irbar .thresh {
+      position: absolute;
+      left: 0; right: 0;
+      border-top: 1px dashed #F59E0B;
+    }
+    .irbar .val {
+      font-size: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--muted);
+      margin-top: 4px;
+      line-height: 1.2;
+    }
+
+    /* ACTIVITY LOG */
+    .log-card {
+      padding: 14px 16px;
+    }
+    .log-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .log-title {
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+    }
+    .log-sub {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: var(--muted);
+      letter-spacing: 1px;
+    }
+    .log-box {
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      line-height: 1.6;
+    }
+    .log-item {
+      display: flex;
+      gap: 10px;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(40, 40, 40, 0.4);
+    }
+    .log-item:last-child { border-bottom: none; }
+    .log-item .time { color: var(--muted); shrink: 0; width: 55px; }
+    .log-item .msg { color: var(--foreground); flex: 1; }
+
+    /* ANALISIS TAB STYLES & MONTH CARD GRID */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      width: 100%;
+    }
+    .sum-box {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      padding: 14px;
+      border-radius: 8px;
+    }
+    .sum-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .sum-val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 24px;
+      font-weight: 900;
+      color: var(--foreground);
+      margin-top: 4px;
+    }
+
+    /* 4 KARTU BULAN INTERAKTIF (CARD GRID) */
+    .month-card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+      width: 100%;
+    }
+    .month-card {
+      display: flex;
+      flex-direction: column;
+      text-align: left;
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+    .month-card:hover {
+      border-color: var(--danger-soft);
+      background: var(--surface-high);
+      transform: translateY(-2px);
+    }
+    .month-card:active {
+      transform: scale(0.98);
+    }
+    .month-card.active {
+      border-color: var(--danger-soft);
+      background: rgba(220, 38, 38, 0.08);
+      box-shadow: 0 0 16px rgba(220, 38, 38, 0.25);
+    }
+    .month-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      width: 100%;
+    }
+    .month-card-name {
+      font-family: 'Inter', sans-serif;
+      font-size: 18px;
+      font-weight: 900;
+      color: var(--foreground);
+    }
+    .month-card-year {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .month-card-stats {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 14px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .month-card-tests {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .month-card-rate {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      font-weight: 900;
+      color: var(--success);
+    }
+
+    /* MODAL OVERLAY DETAIL LOG BULANAN */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(0, 0, 0, 0.82);
+      backdrop-filter: blur(8px);
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      animation: fadeIn 0.2s ease;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+    .modal-box {
+      width: 100%;
+      max-width: 580px;
+      max-height: 85vh;
+      background: #141414;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.9);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      overflow: hidden;
+      animation: zoomIn 0.2s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes zoomIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 12px;
+    }
+    .modal-title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .modal-title {
+      font-size: 20px;
+      font-weight: 900;
+    }
+    .modal-rate-pill {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      font-weight: 900;
+      color: var(--success);
+      background: var(--success-bg);
+      border: 1px solid rgba(34, 197, 94, 0.3);
+      padding: 2px 8px;
+      border-radius: 999px;
+    }
+    .btn-close-modal {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: var(--surface-high);
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+    .btn-close-modal:hover {
+      color: var(--foreground);
+      border-color: #555;
+    }
+    .modal-body {
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-right: 4px;
+    }
+    .record-card {
+      border: 1px solid var(--border);
+      background: var(--surface);
+      padding: 14px;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .record-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .record-title {
+      font-size: 14px;
+      font-weight: 800;
+    }
+    .record-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--success-bg);
+      color: var(--success);
+    }
+    .record-badge.failed {
+      background: var(--danger-bg);
+      color: var(--danger-soft);
+    }
+    .record-meta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      gap: 16px;
+    }
+    .record-notes {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-top: 2px;
+    }
+
+    /* BOTTOM NAVBAR KHUSUS LAYAR HP */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      border-top: 1px solid rgba(40, 40, 40, 0.6);
+      background-color: rgba(19, 19, 19, 0.95);
+      backdrop-filter: blur(16px);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    .nav-inner {
+      position: relative;
+      margin: 0 auto;
+      height: 56px;
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 0;
+    }
+    .nav-indicator {
+      position: absolute;
+      top: 4px;
+      bottom: 4px;
+      width: 33.333%;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      pointer-events: none;
+    }
+    .nav-indicator.pos-auto {
+      left: 0%;
+      border-radius: 0 999px 999px 0;
+      background: rgba(220, 38, 38, 0.2);
+      border-right: 1px solid rgba(220, 38, 38, 0.4);
+      border-top: 1px solid rgba(220, 38, 38, 0.4);
+      border-bottom: 1px solid rgba(220, 38, 38, 0.4);
+      border-left: none;
+    }
+    .nav-indicator.pos-manual {
+      left: 33.333%;
+      padding: 0 8px;
+    }
+    .nav-indicator.pos-manual .nav-indicator-pill {
+      width: 100%;
+      height: 100%;
+      border-radius: 999px;
+      background: rgba(220, 38, 38, 0.2);
+      border: 1px solid rgba(220, 38, 38, 0.4);
+    }
+    .nav-indicator.pos-analisis {
+      left: 66.666%;
+      border-radius: 999px 0 0 999px;
+      background: rgba(220, 38, 38, 0.2);
+      border-left: 1px solid rgba(220, 38, 38, 0.4);
+      border-top: 1px solid rgba(220, 38, 38, 0.4);
+      border-bottom: 1px solid rgba(220, 38, 38, 0.4);
+      border-right: none;
+    }
+    .nav-btn {
+      z-index: 10;
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      transition: color 0.15s ease;
+    }
+    .nav-btn.active {
+      color: var(--danger-soft);
+      font-weight: 700;
+    }
+    .nav-btn span {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 1px;
+    }
+    .nav-btn svg {
+      width: 20px;
+      height: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- TOP HEADER WITH DESKTOP TOP-NAVBAR -->
+    <header class="header">
+      <div class="header-left">
+        <img src="/safe-logo.svg" alt="S.A.F.E." class="header-logo" onerror="this.src='safe-logo.svg'" />
+        <div class="header-title-wrap">
+          <p>S.A.F.E.</p>
+          <div class="status-pill">
+            <div class="status-dot" id="headerDot"></div>
+            <span id="headerStatusText">ONLINE</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- NAVBAR ATAS UNTUK LAPTOP / DESKTOP -->
+      <nav class="top-nav" aria-label="Desktop Navigation">
+        <div class="top-nav-indicator pos-auto" id="topNavIndicator"></div>
+        <button type="button" class="top-nav-btn active" id="topBtn-auto" onclick="switchTab('auto')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          <span>OTOMATIS</span>
+        </button>
+        <button type="button" class="top-nav-btn" id="topBtn-manual" onclick="switchTab('manual')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="12" x2="10" y2="12"></line><line x1="8" y1="10" x2="8" y2="14"></line><line x1="15" y1="13" x2="15.01" y2="13"></line><line x1="18" y1="11" x2="18.01" y2="11"></line><rect x="2" y="6" width="20" height="12" rx="2"></rect></svg>
+          <span>MANUAL</span>
+        </button>
+        <button type="button" class="top-nav-btn" id="topBtn-analisis" onclick="switchTab('analisis')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 3 7.5 7.5 4-4L21 13"></path><path d="M21 8v5h-5"></path></svg>
+          <span>ANALISIS</span>
+        </button>
+      </nav>
+
+      <div class="header-actions">
+        <!-- Tombol Uji Notifikasi Telegram -->
+        <button type="button" class="btn-circle" id="btnTestTele" title="Tes Kirim Notifikasi Telegram" onclick="testTelegramAlert()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+        </button>
+
+        <button type="button" class="btn-circle" title="Home Servo" onclick="fetch(BASE_URL + '/cmd/servo', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'home'})})">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- TITLE / TAB LABEL -->
+    <div class="title-sec">
+      <span class="badge-tab auto" id="subTitleBadge">AUTOMATIC MONITORING ACTIVE</span>
+      <h1>MISSION CONTROL</h1>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <main class="content">
+      <!-- ================= TAB 1: OTOMATIS ================= -->
+      <div class="tab-pane active" id="pane-auto">
+        <div class="laptop-split">
+          <!-- LAYAR KAMERA BESAR DI SEBELAH KIRI -->
+          <div class="laptop-left">
+            <div class="card video-card">
+              <div class="stream-badge" onclick="forceRefreshStream(event)" title="Live Camera Feed (Klik untuk refresh antrean)">
+                <span class="dot"></span> LIVE
+              </div>
+              <img class="stream-feed" id="streamAuto" src="" alt="Live Camera Feed" />
+            </div>
+            <!-- Activity Log Otomatis di bawah kamera -->
+            <div class="card log-card">
+              <div class="log-header">
+                <span class="log-title">LOG KEJADIAN</span>
+                <span class="log-sub">REAL-TIME SYNC</span>
+              </div>
+              <div class="log-box" id="logListAuto"></div>
+            </div>
+          </div>
+
+          <!-- FITUR-FITUR DI SEBELAH KANAN -->
+          <div class="laptop-right">
+            <!-- Sensor Telemetry Stats -->
+            <div class="stats-row">
+              <div class="card sensor-card">
+                <div class="stat-box">
+                  <span class="stat-label">waveform</span>
+                  <span class="stat-val" id="dispWf">SINE</span>
+                </div>
+                <div class="stat-box">
+                  <span class="stat-label">freq</span>
+                  <div class="stat-val-row">
+                    <span class="stat-val" id="dispFreq">45</span>
+                    <span class="stat-unit">Hz</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card sensor-card">
+                <div class="stat-box">
+                  <span class="stat-label">amplitude</span>
+                  <div class="stat-val-row">
+                    <span class="stat-val" id="dispAmp">30</span>
+                    <span class="stat-unit">%</span>
+                  </div>
+                </div>
+                <div class="stat-box">
+                  <span class="stat-label">duration</span>
+                  <div class="stat-val-row">
+                    <span class="stat-val" id="dispDur">10</span>
+                    <span class="stat-unit">s</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- IR Sensors Monitoring -->
+            <div class="card ir-card">
+              <div class="ir-title-row">
+                <span>MONITORING SENSOR IR</span>
+                <span id="irStatus" class="badge-ir">tidak ada panas</span>
+              </div>
+              <div class="irbars" id="irBars"></div>
+              <div class="ir-title-row" style="margin-top: 6px; margin-bottom: 0;">
+                <span style="font-size: 9px;">◄ KIRI</span>
+                <span style="font-size: 9px;" id="irDir">arah: —</span>
+                <span style="font-size: 9px;">KANAN ►</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= TAB 2: MANUAL ================= -->
+      <div class="tab-pane" id="pane-manual">
+        <div class="laptop-split">
+          <!-- LAYAR KAMERA BESAR DI SEBELAH KIRI -->
+          <div class="laptop-left">
+            <div class="card video-card">
+              <div class="stream-badge" onclick="forceRefreshStream(event)" title="Live Camera Feed (Klik untuk refresh antrean)">
+                <span class="dot"></span> LIVE
+              </div>
+              <img class="stream-feed" id="streamManual" src="" alt="Live Camera Feed" />
+            </div>
+            <!-- Activity Log Manual di bawah kamera -->
+            <div class="card log-card">
+              <div class="log-header">
+                <span class="log-title">LOG KEJADIAN</span>
+                <span class="log-sub">REAL-TIME SYNC</span>
+              </div>
+              <div class="log-box" id="logListManual"></div>
+            </div>
+          </div>
+
+          <!-- FITUR-FITUR KONTROL DI SEBELAH KANAN -->
+          <div class="laptop-right">
+            <div class="controls-row">
+              <!-- SENSOR CONTROLS (WAVEFORM, FREQ, AMP, DUR) -->
+              <div class="sensor-panel">
+                <div class="card sensor-card">
+                  <div class="input-box">
+                    <span class="input-label">waveform</span>
+                    <div class="input-inner">
+                      <select id="waveform">
+                        <option value="sine" selected>SINE</option>
+                        <option value="square">SQUARE</option>
+                        <option value="sawtooth">SAWTOOTH</option>
+                        <option value="triangle">TRIANGLE</option>
+                        <option value="sweep">SWEEP</option>
+                        <option value="pulse">PULSE</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="input-box">
+                    <span class="input-label">freq</span>
+                    <div class="input-inner">
+                      <input type="number" id="freqIn" value="45" min="1" step="1">
+                      <span>Hz</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="card sensor-card">
+                  <div class="input-box">
+                    <span class="input-label">amplitude</span>
+                    <div class="input-inner">
+                      <input type="number" id="ampIn" value="30" min="0" max="30" step="1">
+                      <span>%</span>
+                    </div>
+                  </div>
+                  <div class="input-box">
+                    <span class="input-label">duration</span>
+                    <div class="input-inner">
+                      <input type="number" id="durIn" value="10" min="1" max="30" step="1">
+                      <span>s</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- JOYSTICK CONTROLS & SHOOT -->
+              <div class="card joystick-card">
+                <span class="joy-badge">MANUAL ACTIVE</span>
+
+                <div id="joyBase">
+                  <div class="joy-dashed"></div>
+                  <div id="joyKnob">
+                    <div class="joy-dot"></div>
+                  </div>
+                </div>
+
+                <div class="recovery-box">
+                  <div class="rec-top">
+                    <div>
+                      <span class="rec-label">RECOVERY MODE</span>
+                      <p class="rec-status">READY</p>
+                    </div>
+                    <span class="rec-freq" id="recFreqLabel">45 Hz</span>
+                  </div>
+
+                  <button type="button" class="btn-shoot" id="btnShoot" onclick="toggleAudioShoot()">
+                    <span id="shootText">SHOOT (45 HZ)</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= TAB 3: ANALISIS ================= -->
+      <div class="tab-pane" id="pane-analisis">
+        <div style="display: flex; flex-direction: column; gap: 16px; width: 100%;">
+          <!-- SUMMARY STATS -->
+          <div class="summary-grid">
+            <div class="sum-box">
+              <span class="sum-label">TOTAL PENGUJIAN</span>
+              <p class="sum-val" id="valTotal">30</p>
+            </div>
+            <div class="sum-box">
+              <span class="sum-label">SUCCESS RATE</span>
+              <p class="sum-val" style="color: var(--success);" id="valRate">90.0%</p>
+            </div>
+            <div class="sum-box">
+              <span class="sum-label">RATA-RATA DURASI</span>
+              <p class="sum-val" id="valDur">6.8s</p>
+            </div>
+            <div class="sum-box">
+              <span class="sum-label">SUHU OPERASIONAL</span>
+              <p class="sum-val" id="valTemp">39.2°C</p>
+            </div>
+          </div>
+
+          <!-- KARTU LOG RIWAYAT BULANAN (CARD GRID) -->
+          <div class="card" style="padding: 18px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+              <div>
+                <span style="font-size: 15px; font-weight: 900; letter-spacing: 0.5px;">LOG RIWAYAT BULANAN</span>
+                <p style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 2px;">Klik kartu bulan untuk melihat detail log uji akustik</p>
+              </div>
+              <span style="font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted);">ARCHIVE 2026</span>
+            </div>
+
+            <!-- GRID 4 KARTU: JUNI, JULI, AGUSTUS, SEPTEMBER -->
+            <div class="month-card-grid" id="monthCardContainer"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- MODAL POPUP DETAIL LOG BULANAN -->
+    <div class="modal-overlay" id="monthModal" onclick="closeMonthModal()">
+      <div class="modal-box" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title-row">
+            <span class="modal-title" id="modalMonthTitle">Agustus 2026</span>
+            <span class="modal-rate-pill" id="modalMonthRate">100%</span>
+          </div>
+          <button type="button" class="btn-close-modal" onclick="closeMonthModal()" aria-label="Tutup Modal">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+        <div class="modal-body" id="modalRecordsList"></div>
+      </div>
+    </div>
+
+    <!-- BOTTOM NAVBAR (KHUSUS TAMPIL DI LAYAR MOBILE / HP) -->
+    <nav class="bottom-nav">
+      <div class="nav-inner">
+        <div class="nav-indicator pos-auto" id="navIndicator">
+          <div class="nav-indicator-pill"></div>
+        </div>
+        <button type="button" class="nav-btn active" id="tabBtn-auto" onclick="switchTab('auto')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          <span>OTOMATIS</span>
+        </button>
+        <button type="button" class="nav-btn" id="tabBtn-manual" onclick="switchTab('manual')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="12" x2="10" y2="12"></line><line x1="8" y1="10" x2="8" y2="14"></line><line x1="15" y1="13" x2="15.01" y2="13"></line><line x1="18" y1="11" x2="18.01" y2="11"></line><rect x="2" y="6" width="20" height="12" rx="2"></rect></svg>
+          <span>MANUAL</span>
+        </button>
+        <button type="button" class="nav-btn" id="tabBtn-analisis" onclick="switchTab('analisis')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 3 7.5 7.5 4-4L21 13"></path><path d="M21 8v5h-5"></path></svg>
+          <span>ANALISIS</span>
+        </button>
+      </div>
+    </nav>
+  </div>
+
+  <script>
+    // ================= CONNECTION & BACKEND URL =================
+    // Auto-detect backend URL: Jika dibuka di jaringan lokal Raspberry Pi, pakai origin langsung.
+    // Jika dibuka di Vercel / internet luar, otomatis mengarah ke tunnel publik Raspberry Pi.
+    const isLocal = location.hostname === 'localhost' || 
+                    location.hostname === '127.0.0.1' || 
+                    location.hostname.startsWith('192.168.') || 
+                    location.hostname.startsWith('10.');
+    const BASE_URL = isLocal ? '' : 'https://safe1.abedtgr.my.id';
+
+    // Remote: satu snapshot per request agar frame tidak mengantre di tunnel.
+    // LAN: MJPEG tetap dipakai untuk kelancaran jaringan lokal.
+    let streamTimer = null;
+    let streamRequest = null;
+    let streamGeneration = 0;
+    let streamObjectUrl = null;
+    // Hanya memutar 1 stream aktif sesuai tab yang sedang dilihat (hemat 50% kuota & anti antrean buffer).
+    function getStreamUrl() {
+      return (BASE_URL || '') + "/stream?t=" + Date.now();
+    }
+
+    function updateActiveStreamFeed() {
+      const generation = ++streamGeneration;
+      clearTimeout(streamTimer);
+      if (streamRequest) streamRequest.abort();
+      streamRequest = null;
+      const autoEl = document.getElementById("streamAuto");
+      const manualEl = document.getElementById("streamManual");
+      for (const element of [autoEl, manualEl]) {
+        if (element) {
+          element.onerror = null;
+          element.removeAttribute("src");
+        }
+      }
+      if (streamObjectUrl) URL.revokeObjectURL(streamObjectUrl);
+      streamObjectUrl = null;
+      const activeImg = currentTab === "auto" ? autoEl :
+                        currentTab === "manual" ? manualEl : null;
+      if (document.visibilityState === "hidden" || !activeImg) return;
+
+      if (isLocal) {
+        activeImg.onerror = () => {
+          clearTimeout(streamTimer);
+          streamTimer = setTimeout(() => {
+            if (generation === streamGeneration) updateActiveStreamFeed();
+          }, 1500);
+        };
+        activeImg.src = getStreamUrl();
+        return;
+      }
+
+      async function nextSnapshot() {
+        if (generation !== streamGeneration) return;
+        const started = performance.now();
+        const request = new AbortController();
+        streamRequest = request;
+        const timeout = setTimeout(() => request.abort(), 2500);
+        let retryDelay = 100;
+        try {
+          const response = await fetch(BASE_URL + "/snapshot.jpg?t=" + Date.now(), {
+            cache: "no-store", signal: request.signal
+          });
+          if (!response.ok) throw new Error("Camera unavailable");
+          const blob = await response.blob();
+          if (generation !== streamGeneration) return;
+          const previous = streamObjectUrl;
+          streamObjectUrl = URL.createObjectURL(blob);
+          activeImg.src = streamObjectUrl;
+          if (previous) URL.revokeObjectURL(previous);
+          // Maksimal 10 FPS; jaringan lambat otomatis menurunkan FPS tanpa backlog.
+          retryDelay = Math.max(0, 100 - (performance.now() - started));
+        } catch (_) {
+          retryDelay = 500;
+        } finally {
+          clearTimeout(timeout);
+          if (generation === streamGeneration) {
+            streamRequest = null;
+            streamTimer = setTimeout(nextSnapshot, retryDelay);
+          }
+        }
+      }
+      nextSnapshot();
+    }
+
+    // Fungsi klik manual untuk refresh antrean instan
+    function forceRefreshStream(e) {
+      if (e) e.stopPropagation();
+      console.log("Memperbarui feed stream untuk membuang antrean delay...");
+      updateActiveStreamFeed();
+    }
+
+    function initStreamFeeds() {
+      // Saat browser/aplikasi dibuka kembali dari background, segarkan koneksi langsung
+      document.addEventListener("visibilitychange", updateActiveStreamFeed);
+    }
+    window.addEventListener("DOMContentLoaded", initStreamFeeds);
+
+    let currentTab = "auto";
+    let isAudioPlaying = false;
+    let LIMITS = {
+      freq_default: 45, amplitude_max: 0.3, duration_max: 30,
+      yaw_min: 135, yaw_max: 225, pitch_min: 135, pitch_max: 225,
+      jog_step_deg: 3.0, ir_threshold_v: 1.5, n_ir: 5, ir_reverse: true
+    };
+
+    // ================= LOW-LATENCY CONTROL CHANNEL =================
+    // WebSocket menghindari satu HTTP round-trip untuk setiap langkah joystick.
+    // Fallback HTTP tetap tersedia dan hanya mengizinkan satu request aktif.
+    let controlSocket = null;
+    let controlSocketRetryAt = 0;
+    let jogFetchInFlight = false;
+    let pendingJogFetch = null;
+    let jogFetchController = null;
+    let controlAwaitingAck = false;
+    let controlSentAt = 0;
+
+    function getControlSocketUrl() {
+      const url = new URL("/ws/control", BASE_URL || window.location.origin);
+      url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+      return url.toString();
+    }
+
+    function ensureControlSocket() {
+      if (controlSocket &&
+          (controlSocket.readyState === WebSocket.OPEN ||
+           controlSocket.readyState === WebSocket.CONNECTING)) return;
+      if (Date.now() < controlSocketRetryAt) return;
+
+      const socket = new WebSocket(getControlSocketUrl());
+      controlSocket = socket;
+      socket.onmessage = (event) => {
+        if (controlSocket !== socket) return;
+        const message = JSON.parse(event.data);
+        if (message.type === "ack") controlAwaitingAck = false;
+      };
+      socket.onclose = () => {
+        if (controlSocket === socket) {
+          controlSocket = null;
+          controlAwaitingAck = false;
+        }
+        controlSocketRetryAt = Date.now() + 1500;
+      };
+      socket.onerror = () => socket.close();
+    }
+
+    async function flushJogFetch() {
+      if (jogFetchInFlight || !pendingJogFetch) return;
+      const command = pendingJogFetch;
+      pendingJogFetch = null;
+      jogFetchInFlight = true;
+      const controller = new AbortController();
+      jogFetchController = controller;
+      const timeout = setTimeout(() => controller.abort(), 1000);
+      try {
+        await fetch(BASE_URL + "/cmd/jog", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(command), signal: controller.signal
+        });
+      } catch (_) {
+        // Gerakan berikutnya akan mencoba kembali; command lama sengaja dibuang.
+      } finally {
+        clearTimeout(timeout);
+        if (jogFetchController === controller) jogFetchController = null;
+        jogFetchInFlight = false;
+        if (pendingJogFetch) flushJogFetch();
+      }
+    }
+
+    function sendJogCommand(dYaw, dPitch) {
+      if (currentTab !== "manual" || document.visibilityState !== "visible") return;
+      ensureControlSocket();
+      const command = { d_yaw: dYaw, d_pitch: dPitch };
+      if (controlSocket && controlSocket.readyState === WebSocket.OPEN) {
+        pendingJogFetch = null;
+        if (controlAwaitingAck) {
+          if (performance.now() - controlSentAt > 1000) controlSocket.close();
+          return;
+        }
+        if (controlSocket.bufferedAmount > 0 || jogFetchInFlight) return;
+        controlAwaitingAck = true;
+        controlSentAt = performance.now();
+        controlSocket.send(JSON.stringify({ type: "jog", ...command }));
+        return;
+      }
+      pendingJogFetch = command;
+      flushJogFetch();
+    }
+
+    function stopJogCommand() {
+      pendingJogFetch = null;
+      if (jogFetchController) jogFetchController.abort();
+      if (controlSocket && controlSocket.readyState === WebSocket.OPEN) {
+        controlSocket.send(JSON.stringify({ type: "stop" }));
+      }
+    }
+
+    // ================= CLIENT-SIDE ROUTER / TAB SWITCHER =================
+    function switchTab(tab, updateUrl = true, notifyServer = true) {
+      currentTab = tab;
+      updateActiveStreamFeed();
+      if (tab === "manual") ensureControlSocket();
+      else stopJogCommand();
+      if (updateUrl && window.history.pushState) {
+        window.history.pushState({ tab }, "", "#" + tab);
+      }
+
+      // Update active pane
+      document.querySelectorAll(".tab-pane").forEach(p => p.classList.remove("active"));
+      const targetPane = document.getElementById("pane-" + tab);
+      if (targetPane) targetPane.classList.add("active");
+
+      // Update bottom nav (mobile)
+      document.querySelectorAll(".nav-btn").forEach(b => b.classList.remove("active"));
+      const targetBtn = document.getElementById("tabBtn-" + tab);
+      if (targetBtn) targetBtn.classList.add("active");
+      const ind = document.getElementById("navIndicator");
+      if (ind) ind.className = "nav-indicator pos-" + tab;
+
+      // Update top nav (laptop)
+      document.querySelectorAll(".top-nav-btn").forEach(b => b.classList.remove("active"));
+      const targetTopBtn = document.getElementById("topBtn-" + tab);
+      if (targetTopBtn) targetTopBtn.classList.add("active");
+      const topInd = document.getElementById("topNavIndicator");
+      if (topInd) topInd.className = "top-nav-indicator pos-" + tab;
+
+      // Update header status & title badge
+      const dot = document.getElementById("headerDot");
+      const st = document.getElementById("headerStatusText");
+      const badge = document.getElementById("subTitleBadge");
+
+      dot.className = "status-dot " + tab;
+      badge.className = "badge-tab " + tab;
+
+      if (tab === "auto") {
+        st.textContent = "ONLINE";
+        badge.textContent = "AUTOMATIC MONITORING ACTIVE";
+        if (notifyServer) {
+          fetch(BASE_URL + "/cmd/mode", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode: "auto" })
+          }).catch(() => {});
+        }
+      } else if (tab === "manual") {
+        st.textContent = "MANUAL ON";
+        badge.textContent = "MANUAL CONTROL ACTIVE";
+        if (notifyServer) {
+          fetch(BASE_URL + "/cmd/mode", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode: "manual" })
+          }).catch(() => {});
+        }
+      } else if (tab === "analisis") {
+        st.textContent = "DIAGNOSTICS";
+        badge.textContent = "SYSTEM DIAGNOSTICS & HISTORY";
+      }
+    }
+
+    function getUrlTab() {
+      const pathSegs = window.location.pathname.replace(/\/$/, "").split("/");
+      const lastSeg = pathSegs[pathSegs.length - 1];
+      if (["auto", "manual", "analisis"].includes(lastSeg)) return lastSeg;
+      const hash = window.location.hash.replace("#", "");
+      if (["auto", "manual", "analisis"].includes(hash)) return hash;
+      return "auto";
+    }
+
+    // Handle back/forward navigation in browser
+    window.addEventListener("popstate", () => {
+      switchTab(getUrlTab(), false);
+    });
+
+    // Inisialisasi tab berdasarkan URL pathname atau hash
+    switchTab(getUrlTab(), false);
+
+    // Heartbeat: jaga mode manual tetap hidup saat tab manual aktif
+    setInterval(() => {
+      if (currentTab === "manual") {
+        fetch(BASE_URL + "/heartbeat", { method: "POST" }).catch(() => {});
+      }
+    }, 2000);
+
+    // ================= CONFIG & TELEMETRY =================
+    fetch(BASE_URL + "/config").then(r => r.json()).then(c => {
+      LIMITS = Object.assign(LIMITS, c);
+      document.getElementById("dispFreq").textContent = LIMITS.freq_default || 45;
+      document.getElementById("dispAmp").textContent = Math.round((LIMITS.amplitude_max || 0.3) * 100);
+      document.getElementById("dispDur").textContent = LIMITS.duration_max || 10;
+      
+      document.getElementById("freqIn").value = LIMITS.freq_default;
+      document.getElementById("ampIn").value = Math.round((LIMITS.amplitude_max || 0.3) * 100);
+      document.getElementById("ampIn").max = Math.round((LIMITS.amplitude_max || 0.3) * 100);
+      document.getElementById("durIn").value = LIMITS.duration_max;
+      document.getElementById("durIn").max = LIMITS.duration_max;
+      updateShootLabel();
+      buildIrBars();
+    }).catch(() => {});
+
+    // ================= MANUAL CONTROLS & SHOOT =================
+    document.getElementById("freqIn").addEventListener("input", updateShootLabel);
+    function updateShootLabel() {
+      const f = document.getElementById("freqIn").value;
+      document.getElementById("recFreqLabel").textContent = `${f} Hz`;
+      if (!isAudioPlaying) {
+        document.getElementById("shootText").textContent = `SHOOT (${f} HZ)`;
+      }
+    }
+
+    async function toggleAudioShoot() {
+      if (isAudioPlaying) {
+        await fetch(BASE_URL + "/cmd/audio", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "stop" })
+        });
+      } else {
+        const wf = document.getElementById("waveform").value;
+        const freq = parseFloat(document.getElementById("freqIn").value) || 45;
+        const amp = (parseFloat(document.getElementById("ampIn").value) || 30) / 100;
+        const dur = parseFloat(document.getElementById("durIn").value) || 10;
+        await fetch(BASE_URL + "/cmd/audio", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "play",
+            waveform: wf,
+            freq: freq,
+            amplitude: Math.min(amp, LIMITS.amplitude_max),
+            duration: Math.min(dur, LIMITS.duration_max)
+          })
+        });
+      }
+    }
+
+    // ================= JOYSTICK CONTROLS =================
+    const joyBase = document.getElementById("joyBase");
+    const joyKnob = document.getElementById("joyKnob");
+    let joyNX = 0, joyNY = 0, joyTimer = null;
+
+    function joyUpdate(clientX, clientY) {
+      const r = joyBase.getBoundingClientRect();
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      const maxR = r.width / 2 - 27;
+      let dx = clientX - cx, dy = clientY - cy;
+      const d = Math.hypot(dx, dy);
+      if (d > maxR) { dx *= maxR / d; dy *= maxR / d; }
+      joyKnob.style.left = `calc(50% + ${dx}px)`;
+      joyKnob.style.top = `calc(50% + ${dy}px)`;
+      joyNX = dx / maxR;
+      joyNY = dy / maxR;
+    }
+
+    function joyReset() {
+      joyNX = joyNY = 0;
+      stopJogCommand();
+      joyKnob.style.left = "50%";
+      joyKnob.style.top = "50%";
+      joyKnob.classList.remove("active");
+      if (joyTimer) { clearInterval(joyTimer); joyTimer = null; }
+    }
+
+    joyKnob.addEventListener("pointerdown", (ev) => {
+      joyKnob.setPointerCapture(ev.pointerId);
+      joyKnob.classList.add("active");
+      joyUpdate(ev.clientX, ev.clientY);
+      sendJogCommand(
+        joyNX * LIMITS.jog_step_deg,
+        joyNY * LIMITS.jog_step_deg
+      );
+      joyTimer = setInterval(() => {
+        if (Math.abs(joyNX) < 0.05 && Math.abs(joyNY) < 0.05) {
+          stopJogCommand();
+          return;
+        }
+        sendJogCommand(
+          joyNX * LIMITS.jog_step_deg,
+          joyNY * LIMITS.jog_step_deg
+        );
+      }, 100);
+    });
+    joyKnob.addEventListener("pointermove", (ev) => {
+      if (joyTimer) joyUpdate(ev.clientX, ev.clientY);
+    });
+    joyKnob.addEventListener("pointerup", joyReset);
+    joyKnob.addEventListener("pointercancel", joyReset);
+    joyKnob.addEventListener("lostpointercapture", joyReset);
+    window.addEventListener("blur", joyReset);
+    window.addEventListener("pagehide", joyReset);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") joyReset();
+    });
+
+    // ================= IR SENSOR BARS =================
+    const IR_VMAX = 3.3;
+    const irBarsEl = document.getElementById("irBars");
+    function buildIrBars() {
+      if (!irBarsEl) return;
+      irBarsEl.innerHTML = "";
+      let ids = [];
+      for (let i = 1; i <= LIMITS.n_ir; i++) ids.push(i);
+      if (LIMITS.ir_reverse) ids.reverse();
+      for (const i of ids) {
+        const d = document.createElement("div");
+        d.className = "irbar"; d.id = "irbar" + i;
+        d.innerHTML =
+          `<div class="col">` +
+          `<div class="thresh" style="bottom:${(LIMITS.ir_threshold_v / IR_VMAX * 100).toFixed(1)}%"></div>` +
+          `<div class="fill"></div></div>` +
+          `<div class="val">S${i}<br>— V</div>`;
+        irBarsEl.appendChild(d);
+      }
+    }
+
+    function updateIR(msg) {
+      msg.sensors.forEach((s) => {
+        const bar = document.getElementById("irbar" + s.sensor_id);
+        if (!bar) return;
+        bar.classList.toggle("hot", s.triggered);
+        bar.querySelector(".fill").style.height = Math.min(100, s.voltage / IR_VMAX * 100) + "%";
+        bar.querySelector(".val").innerHTML = `S${s.sensor_id}<br>${s.voltage.toFixed(2)} V`;
+      });
+      const st = document.getElementById("irStatus");
+      if (st) {
+        if (msg.ir_hot) {
+          st.textContent = "PANAS TERDETEKSI";
+          st.className = "badge-ir hot";
+        } else {
+          st.textContent = "tidak ada panas";
+          st.className = "badge-ir";
+        }
+      }
+      const dirEl = document.getElementById("irDir");
+      if (dirEl) {
+        if (msg.ir_x !== null && msg.ir_x !== undefined) {
+          const arah = msg.ir_x < -0.2 ? "kiri" : msg.ir_x > 0.2 ? "kanan" : "tengah";
+          dirEl.textContent = `arah: ${arah} (${msg.ir_x.toFixed(2)})`;
+        } else {
+          dirEl.textContent = "arah: —";
+        }
+      }
+    }
+
+    // ================= ACTIVITY LOGS =================
+    const logListAuto = document.getElementById("logListAuto");
+    const logListManual = document.getElementById("logListManual");
+    function addLog(entry) {
+      const d = new Date(entry.t * 1000);
+      const hh = String(d.getHours()).padStart(2, "0");
+      const mm = String(d.getMinutes()).padStart(2, "0");
+      const ss = String(d.getSeconds()).padStart(2, "0");
+
+      [logListAuto, logListManual].forEach(container => {
+        if (!container) return;
+        const nearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 40;
+        const div = document.createElement("div");
+        div.className = "log-item";
+        div.innerHTML = `<span class="time">${hh}:${mm}:${ss}</span><span class="msg"></span>`;
+        div.querySelector(".msg").textContent = entry.msg;
+        container.appendChild(div);
+        while (container.children.length > 100) container.removeChild(container.firstChild);
+        if (nearBottom) container.scrollTop = container.scrollHeight;
+      });
+    }
+    fetch((BASE_URL || '') + "/logs").then(r => r.json()).then(list => list.forEach(addLog)).catch(() => {});
+
+    // ================= SSE LISTENER =================
+    const es = new EventSource((BASE_URL || '') + "/events");
+    es.onmessage = (ev) => {
+      const msg = JSON.parse(ev.data);
+      if (msg.type === "ir") updateIR(msg);
+      else if (msg.type === "log") addLog(msg);
+      else if (msg.type === "mode") {
+        const mode = msg.value;
+        if ((mode === "auto" || mode === "manual") && currentTab !== mode && currentTab !== "analisis") {
+          console.log("Sinkronisasi mode otomatis antar-perangkat:", mode);
+          switchTab(mode, true, false);
+        }
+      }
+      else if (msg.type === "audio") {
+        isAudioPlaying = msg.playing;
+        const btn = document.getElementById("btnShoot");
+        const txt = document.getElementById("shootText");
+        if (msg.playing) {
+          btn.classList.add("playing");
+          txt.textContent = "STOP AUDIO";
+          document.getElementById("dispFreq").textContent = msg.freq;
+          document.getElementById("dispWf").textContent = (msg.waveform || "SINE").toUpperCase();
+        } else {
+          btn.classList.remove("playing");
+          updateShootLabel();
+        }
+      }
+    };
+
+    // ================= DATA ARSIP BULANAN (JUNI, JULI, AGUSTUS, SEPTEMBER) =================
+    const MONTHS = [
+      {
+        id: "juni", name: "Juni", year: "2026", total: 4, rate: "75.0%", avg: "9.4s",
+        records: [
+          { title: "Uji Resonansi Awal Tabung", status: "success", date: "28 Jun, 14:20", freq: "40 Hz", dur: "8.8s", notes: "Api padam jarak 30 cm dengan gelombang sinus." },
+          { title: "Sweep Frekuensi 30-60Hz", status: "success", date: "21 Jun, 16:05", freq: "45 Hz", dur: "9.1s", notes: "Resonansi optimal di rentang 44-46 Hz." },
+          { title: "Kalibrasi Sudut Servo", status: "failed", date: "14 Jun, 11:42", freq: "50 Hz", dur: "12.0s", notes: "Deviasi nozzle menyebabkan api belum padam." },
+          { title: "Uji Kolimator Akustik", status: "success", date: "08 Jun, 10:15", freq: "40 Hz", dur: "10.2s", notes: "Kolimator berhasil memfokuskan rambatan suara." }
+        ]
+      },
+      {
+        id: "juli", name: "Juli", year: "2026", total: 8, rate: "87.5%", avg: "7.6s",
+        records: [
+          { title: "Pemadaman Otomatis Tahap II", status: "success", date: "29 Jul, 15:10", freq: "45 Hz", dur: "6.9s", notes: "Penguncian servo presisi pada koordinat api lilin." },
+          { title: "Variasi Amplitudo Maksimum", status: "success", date: "22 Jul, 13:45", freq: "45 Hz", dur: "7.2s", notes: "Amplitudo 85% memberi pemadaman tercepat." },
+          { title: "Uji Turbulensi Angin Luar", status: "failed", date: "15 Jul, 16:20", freq: "42 Hz", dur: "11.5s", notes: "Hembusan angin luar mengganggu stabilitas gelombang akustik." },
+          { title: "Integrasi YOLO & Akustik", status: "success", date: "08 Jul, 10:30", freq: "45 Hz", dur: "7.8s", notes: "Pulse otomatis terpicu saat bounding box terdeteksi." }
+        ]
+      },
+      {
+        id: "agustus", name: "Agustus", year: "2026", total: 12, rate: "100%", avg: "6.2s",
+        records: [
+          { title: "Validasi Akhir Pemadaman Cepat", status: "success", date: "30 Agu, 16:45", freq: "45 Hz", dur: "5.4s", notes: "Pemadaman stabil, respon kolimator presisi dalam 5.4 detik." },
+          { title: "Pengujian Lapangan Beruntun", status: "success", date: "28 Agu, 15:32", freq: "45 Hz", dur: "5.8s", notes: "Deteksi akurat, 5 titik api berturut-turut padam sempurna." },
+          { title: "Validasi Tracking Kamera Real-Time", status: "success", date: "26 Agu, 14:10", freq: "45 Hz", dur: "6.1s", notes: "Latensi tracking di bawah 50ms, servo responsif." },
+          { title: "Uji Daya Tahan & Stabilitas Termal", status: "success", date: "25 Agu, 11:20", freq: "45 Hz", dur: "6.5s", notes: "Suhu aman 39.2°C, konsumsi RAM stabil 48%." }
+        ]
+      },
+      {
+        id: "september", name: "September", year: "2026", total: 6, rate: "100%", avg: "5.4s",
+        records: [
+          { title: "Demonstrasi Monitoring Web Mission Control", status: "success", date: "18 Sep, 15:40", freq: "45 Hz", dur: "5.2s", notes: "Sinkronisasi telemetri dashboard responsif dan akurat." },
+          { title: "Efisiensi Daya Gelombang Suara", status: "success", date: "10 Sep, 13:12", freq: "45 Hz", dur: "5.4s", notes: "Daya stabil dengan hasil pemadaman optimal." },
+          { title: "Uji Stabilitas Termal Amplifier", status: "success", date: "04 Sep, 10:00", freq: "45 Hz", dur: "5.6s", notes: "Suhu Raspberry Pi & amplifier aman di 39.2°C." }
+        ]
+      }
+    ];
+
+    // Render 4 Kartu Bulan
+    function renderMonthCards() {
+      const container = document.getElementById("monthCardContainer");
+      if (!container) return;
+      container.innerHTML = "";
+      MONTHS.forEach(m => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "month-card";
+        btn.onclick = () => openMonthModal(m.id);
+        btn.innerHTML = `
+          <div class="month-card-header">
+            <span class="month-card-name">${m.name}</span>
+            <span class="month-card-year">${m.year}</span>
+          </div>
+          <div class="month-card-stats">
+            <span class="month-card-tests">${m.total} Pengujian</span>
+            <span class="month-card-rate">${m.rate}</span>
+          </div>
+        `;
+        container.appendChild(btn);
+      });
+    }
+
+    // Buka Modal Detail Log
+    function openMonthModal(monthId) {
+      const m = MONTHS.find(x => x.id === monthId);
+      if (!m) return;
+      document.getElementById("modalMonthTitle").textContent = `${m.name} ${m.year}`;
+      document.getElementById("modalMonthRate").textContent = m.rate;
+      
+      const list = document.getElementById("modalRecordsList");
+      list.innerHTML = "";
+      m.records.forEach(r => {
+        const card = document.createElement("div");
+        card.className = "record-card";
+        card.innerHTML = `
+          <div class="record-top">
+            <span class="record-title">${r.title}</span>
+            <span class="record-badge ${r.status === 'failed' ? 'failed' : ''}">${r.status === 'success' ? 'PADAM' : 'GAGAL'}</span>
+          </div>
+          <div class="record-meta">
+            <span>📅 ${r.date}</span>
+            <span>⚡ ${r.freq}</span>
+            <span>⏱️ ${r.dur}</span>
+          </div>
+          <p class="record-notes">${r.notes}</p>
+        `;
+        list.appendChild(card);
+      });
+
+      document.getElementById("monthModal").classList.add("active");
+    }
+
+    function closeMonthModal() {
+      document.getElementById("monthModal").classList.remove("active");
+    }
+
+    // Uji Kirim Notifikasi Telegram dari Dashboard
+    async function testTelegramAlert() {
+      const btn = document.getElementById("btnTestTele");
+      if (!btn) return;
+      btn.style.opacity = "0.5";
+      btn.style.pointerEvents = "none";
+      try {
+        const targetUrl = (BASE_URL || '') + "/cmd/test_telegram";
+        const res = await fetch(targetUrl, { method: "POST" });
+        const data = await res.json();
+        if (data.ok) {
+          alert("✅ Berhasil! Notifikasi simulasi api telah dikirim ke Telegram Anda.");
+        } else {
+          alert("❌ Gagal mengirim: " + (data.error || "Cek koneksi internet / bot token"));
+        }
+      } catch (err) {
+        alert("❌ Terjadi error: " + err.message);
+      } finally {
+        btn.style.opacity = "1";
+        btn.style.pointerEvents = "auto";
+      }
+    }
+
+    renderMonthCards();
+
+    // ================= REGISTER SERVICE WORKER (PWA) =================
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(err => {
+          console.log('Service Worker registration failed:', err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
